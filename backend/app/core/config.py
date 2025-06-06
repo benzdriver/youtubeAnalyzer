@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     
     whisper_model_size: str = "base"
     max_audio_duration: int = 3600  # 1 hour in seconds
+    whisper_device: str = "auto"  # auto, cpu, cuda
     
     max_comments: int = 1000
     default_analysis_depth: str = "detailed"
@@ -125,6 +126,15 @@ def validate_youtube_config(settings: Settings) -> None:
     
     if settings.audio_cleanup_after_hours < 0:
         raise InvalidConfigurationValue("Audio cleanup hours cannot be negative")
+    
+    if settings.whisper_model_size not in ["tiny", "base", "small", "medium", "large", "large-v2", "large-v3"]:
+        raise InvalidConfigurationValue(f"Invalid Whisper model size: {settings.whisper_model_size}")
+    
+    if settings.whisper_device not in ["auto", "cpu", "cuda"]:
+        raise InvalidConfigurationValue(f"Invalid Whisper device: {settings.whisper_device}")
+    
+    if settings.max_audio_duration <= 0:
+        raise InvalidConfigurationValue("Max audio duration must be positive")
 
 
 settings = get_settings()
