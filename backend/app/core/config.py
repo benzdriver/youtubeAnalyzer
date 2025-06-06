@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     storage_path: str = "./storage"
     max_file_size: int = 2 * 1024 * 1024 * 1024
     
+    youtube_max_comments: int = 1000
+    youtube_audio_quality: str = "192K"
+    youtube_audio_format: str = "wav"
+    audio_cleanup_after_hours: int = 24
+    
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
@@ -93,7 +98,33 @@ def get_settings() -> Settings:
     Raises:
         ConfigurationError: If configuration validation fails
     """
-    return Settings()
+    settings = Settings()
+    validate_youtube_config(settings)
+    return settings
+
+
+def validate_youtube_config(settings: Settings) -> None:
+    """Validate YouTube-specific configuration.
+    
+    Args:
+        settings: The settings instance to validate
+        
+    Raises:
+        MissingEnvironmentVariable: If YouTube API key is missing when needed
+        InvalidConfigurationValue: If configuration values are invalid
+    """
+    
+    if not settings.storage_path:
+        raise InvalidConfigurationValue("Storage path cannot be empty")
+    
+    if not settings.upload_dir:
+        raise InvalidConfigurationValue("Upload directory cannot be empty")
+    
+    if settings.youtube_max_comments <= 0:
+        raise InvalidConfigurationValue("YouTube max comments must be positive")
+    
+    if settings.audio_cleanup_after_hours < 0:
+        raise InvalidConfigurationValue("Audio cleanup hours cannot be negative")
 
 
 settings = get_settings()

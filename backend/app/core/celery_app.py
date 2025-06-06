@@ -21,13 +21,25 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=1000,
     task_routes={
-        "app.tasks.analyze_video_task": {"queue": "analysis"},
+        "app.core.celery_app.analyze_video_task": {"queue": "analysis"},
     },
+    task_default_retry_delay=60,
+    task_max_retries=3,
 )
 
 
 @celery_app.task(bind=True)
 def analyze_video_task(self, task_id: str):
+    import asyncio
     from app.tasks.analysis_task import run_analysis
 
-    return run_analysis(task_id)
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        result = loop.run_until_complete(run_analysis(task_id))
+        loop.close()
+        return result
+    except Exception as e:
+        import logging
+        logging.error(f"Celery task failed for {task_id}: {str(e)}")
+        raise
