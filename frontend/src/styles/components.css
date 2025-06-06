@@ -1,0 +1,287 @@
+/* Additional component-specific styles */
+
+/* Analysis Form Styles */
+.analysis-form {
+  @apply space-y-6;
+}
+
+.analysis-form .form-group {
+  @apply space-y-2;
+}
+
+.analysis-form .form-label {
+  @apply block text-sm font-medium text-gray-700;
+}
+
+.analysis-form .form-input {
+  @apply input;
+}
+
+.analysis-form .form-error {
+  @apply mt-1 text-sm text-red-600;
+}
+
+.analysis-form .form-help {
+  @apply mt-1 text-sm text-gray-500;
+}
+
+/* Progress Tracker Styles */
+.progress-tracker {
+  @apply space-y-4;
+}
+
+.progress-step {
+  @apply flex items-center space-x-3 p-3 rounded-lg transition-colors;
+}
+
+.progress-step.pending {
+  @apply bg-gray-50 text-gray-600;
+}
+
+.progress-step.running {
+  @apply bg-blue-50 text-blue-700;
+}
+
+.progress-step.completed {
+  @apply bg-green-50 text-green-700;
+}
+
+.progress-step.failed {
+  @apply bg-red-50 text-red-700;
+}
+
+.progress-step-icon {
+  @apply flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium;
+}
+
+.progress-step.pending .progress-step-icon {
+  @apply bg-gray-200 text-gray-600;
+}
+
+.progress-step.running .progress-step-icon {
+  @apply bg-blue-200 text-blue-700;
+}
+
+.progress-step.completed .progress-step-icon {
+  @apply bg-green-200 text-green-700;
+}
+
+.progress-step.failed .progress-step-icon {
+  @apply bg-red-200 text-red-700;
+}
+
+/* Analysis Type Selector Styles */
+.analysis-type-grid {
+  @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+}
+
+.analysis-type-card {
+  @apply card-hover cursor-pointer transition-all duration-200;
+}
+
+.analysis-type-card.selected {
+  @apply ring-2 ring-primary-500 bg-primary-50;
+}
+
+.analysis-type-card:hover:not(.selected) {
+  @apply shadow-medium;
+}
+
+.analysis-type-icon {
+  @apply text-3xl mb-3;
+}
+
+.analysis-type-title {
+  @apply text-lg font-semibold mb-2;
+}
+
+.analysis-type-description {
+  @apply text-sm text-gray-600 mb-3;
+}
+
+.analysis-type-features {
+  @apply space-y-1;
+}
+
+.analysis-type-feature {
+  @apply flex items-center text-sm;
+}
+
+.analysis-type-feature-icon {
+  @apply w-2 h-2 bg-primary-500 rounded-full mr-2;
+}
+
+/* Result Display Styles */
+.result-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 gap-6;
+}
+
+.result-section {
+  @apply space-y-4;
+}
+
+.result-section-title {
+  @apply text-lg font-semibold mb-3;
+}
+
+.result-metric {
+  @apply flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0;
+}
+
+.result-metric-label {
+  @apply text-sm text-gray-600;
+}
+
+.result-metric-value {
+  @apply text-sm font-medium text-gray-900;
+}
+
+/* Notification Styles */
+.notification {
+  @apply fixed top-4 right-4 z-50 max-w-sm w-full bg-white rounded-lg shadow-lg border border-gray-200 p-4;
+}
+
+.notification.success {
+  @apply border-green-200 bg-green-50;
+}
+
+.notification.error {
+  @apply border-red-200 bg-red-50;
+}
+
+.notification.warning {
+  @apply border-yellow-200 bg-yellow-50;
+}
+
+.notification.info {
+  @apply border-blue-200 bg-blue-50;
+}
+
+.notification-icon {
+  @apply flex-shrink-0 w-5 h-5;
+}
+
+.notification.success .notification-icon {
+  @apply text-green-400;
+}
+
+.notification.error .notification-icon {
+  @apply text-red-400;
+}
+
+.notification.warning .notification-icon {
+  @apply text-yellow-400;
+}
+
+.notification.info .notification-icon {
+  @apply text-blue-400;
+}
+
+.notification-content {
+  @apply ml-3 flex-1;
+}
+
+.notification-title {
+  @apply text-sm font-medium;
+}
+
+.notification.success .notification-title {
+  @apply text-green-800;
+}
+
+.notification.error .notification-title {
+  @apply text-red-800;
+}
+
+.notification.warning .notification-title {
+  @apply text-yellow-800;
+}
+
+.notification.info .notification-title {
+  @apply text-blue-800;
+}
+
+.notification-message {
+  @apply mt-1 text-sm;
+}
+
+.notification.success .notification-message {
+  @apply text-green-700;
+}
+
+.notification.error .notification-message {
+  @apply text-red-700;
+}
+
+.notification.warning .notification-message {
+  @apply text-yellow-700;
+}
+
+.notification.info .notification-message {
+  @apply text-blue-700;
+}
+
+/* Loading States */
+.loading-spinner {
+  @apply animate-spin rounded-full h-4 w-4 border-b-2 border-current;
+}
+
+.loading-dots {
+  @apply flex space-x-1;
+}
+
+.loading-dot {
+  @apply w-2 h-2 bg-current rounded-full animate-pulse;
+}
+
+.loading-dot:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+/* Responsive Design Helpers */
+@media (max-width: 640px) {
+  .mobile-stack {
+    @apply flex-col space-y-2 space-x-0;
+  }
+  
+  .mobile-full {
+    @apply w-full;
+  }
+  
+  .mobile-hidden {
+    @apply hidden;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-flex {
+    @apply flex space-x-4 space-y-0;
+  }
+  
+  .desktop-grid {
+    @apply grid grid-cols-2 gap-4;
+  }
+}
+
+/* Dark mode support (if needed in future) */
+@media (prefers-color-scheme: dark) {
+  .dark-mode {
+    @apply bg-gray-900 text-gray-100;
+  }
+  
+  .dark-mode .card {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark-mode .input {
+    @apply bg-gray-800 border-gray-600 text-gray-100 placeholder-gray-400;
+  }
+}
