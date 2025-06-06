@@ -102,12 +102,41 @@ async def run_analysis(task_id: str):
             await task_service.update_task_status(
                 task_id,
                 TaskStatus.PROCESSING,
-                current_step="整理提取结果",
-                progress=90,
+                current_step="内容分析",
+                progress=85,
             )
 
             await send_progress_update(
-                task_id, 90, "整理和验证提取的数据", "整理提取结果"
+                task_id, 85, "开始内容分析", "内容分析"
+            )
+
+            from app.tasks.content_analysis import analyze_content_task
+            
+            content_analysis_result = await analyze_content_task(
+                task_id, transcription_result, {
+                    'id': video_info.id,
+                    'title': video_info.title,
+                    'description': video_info.description,
+                    'duration': video_info.duration,
+                    'view_count': video_info.view_count,
+                    'like_count': video_info.like_count,
+                    'channel_id': video_info.channel_id,
+                    'channel_title': video_info.channel_title,
+                    'upload_date': video_info.upload_date,
+                    'thumbnail_url': video_info.thumbnail_url,
+                    'language': video_info.language
+                }
+            )
+
+            await task_service.update_task_status(
+                task_id,
+                TaskStatus.PROCESSING,
+                current_step="整理提取结果",
+                progress=95,
+            )
+
+            await send_progress_update(
+                task_id, 95, "整理和验证提取的数据", "整理提取结果"
             )
 
             extraction_result = {
@@ -140,6 +169,7 @@ async def run_analysis(task_id: str):
                     for comment in comments
                 ],
                 'transcription': transcription_result,
+                'content_analysis': content_analysis_result,
                 'extraction_metadata': {
                     'total_comments': len(comments),
                     'author_replies': len([c for c in comments if c.is_author_reply]),
