@@ -87,6 +87,21 @@ async def run_analysis(task_id: str):
             await task_service.update_task_status(
                 task_id,
                 TaskStatus.PROCESSING,
+                current_step="转录音频内容",
+                progress=75,
+            )
+
+            await send_progress_update(
+                task_id, 75, "开始音频转录", "转录音频内容"
+            )
+
+            from app.tasks.transcription import transcribe_audio_task
+            
+            transcription_result = await transcribe_audio_task(task_id, audio_file_path)
+
+            await task_service.update_task_status(
+                task_id,
+                TaskStatus.PROCESSING,
                 current_step="整理提取结果",
                 progress=90,
             )
@@ -124,6 +139,7 @@ async def run_analysis(task_id: str):
                     }
                     for comment in comments
                 ],
+                'transcription': transcription_result,
                 'extraction_metadata': {
                     'total_comments': len(comments),
                     'author_replies': len([c for c in comments if c.is_author_reply]),
