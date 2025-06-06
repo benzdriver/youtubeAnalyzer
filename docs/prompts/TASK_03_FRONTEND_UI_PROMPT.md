@@ -1,5 +1,29 @@
 # Task 3: 前端UI框架 - Sub-Session Prompt
 
+## 必读文档
+
+**重要提示**: 开始此任务前，你必须阅读并理解以下文档：
+
+### 核心协调文档
+- `docs/TASK_COORDINATION.md` - 整体任务依赖关系和项目结构
+- `docs/ARCHITECTURE_OVERVIEW.md` - 系统架构和技术栈
+- `docs/CODING_STANDARDS.md` - 代码格式、命名规范和最佳实践
+- `docs/API_SPECIFICATIONS.md` - 完整API接口定义
+
+### 任务专用文档
+- `docs/tasks/TASK_03_FRONTEND_UI.md` - 详细任务要求和验收标准
+- `docs/contracts/frontend_framework_contract.md` - 前端框架接口规范
+
+### 参考文档
+- `docs/DEVELOPMENT_SETUP.md` - 开发环境配置
+- `docs/PROGRESS_TRACKER.md` - 进度跟踪和任务状态更新
+
+### 依赖关系
+- Task 1 (项目配置) 必须先完成
+- Task 2 (后端API) 可以并行开发，但需要了解API接口
+- 查看 `docs/contracts/project_config_contract.md` 了解配置接口
+- 查看 `docs/contracts/api_framework_contract.md` 了解API接口
+
 ## 项目背景
 
 你正在为YouTube视频分析工具构建Next.js前端界面。这个前端需要提供：

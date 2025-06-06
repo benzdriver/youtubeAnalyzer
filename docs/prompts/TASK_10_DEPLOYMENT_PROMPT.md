@@ -1,5 +1,28 @@
 # Task 10: 部署配置 - Sub-Session Prompt
 
+## 必读文档
+
+**重要提示**: 开始此任务前，你必须阅读并理解以下文档：
+
+### 核心协调文档
+- `docs/TASK_COORDINATION.md` - 整体任务依赖关系和项目结构
+- `docs/ARCHITECTURE_OVERVIEW.md` - 系统架构和技术栈
+- `docs/CODING_STANDARDS.md` - 代码格式、命名规范和最佳实践
+- `docs/API_SPECIFICATIONS.md` - 完整API接口定义
+
+### 任务专用文档
+- `docs/tasks/TASK_10_DEPLOYMENT.md` - 详细任务要求和验收标准
+- `docs/contracts/deployment_contract.md` - 部署配置接口规范
+
+### 参考文档
+- `docs/DEVELOPMENT_SETUP.md` - 开发环境配置
+- `docs/PROGRESS_TRACKER.md` - 进度跟踪和任务状态更新
+
+### 依赖关系
+- 所有前置任务 (Task 1-9) 必须先完成
+- 查看所有相关的contract文档了解各模块接口
+- 确保系统集成测试通过后再进行部署配置
+
 ## 项目背景
 
 你正在为YouTube视频分析工具构建部署配置。这个任务需要：
