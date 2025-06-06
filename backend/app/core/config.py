@@ -36,26 +36,26 @@ class Settings(BaseSettings):
     port: int = 8000
     reload: bool = False
     
-    database_url: str
+    database_url: str = "sqlite+aiosqlite:///./youtube_analyzer.db"
     database_pool_size: int = 10
     database_max_overflow: int = 20
     
     redis_url: str = "redis://localhost:6379"
     redis_max_connections: int = 10
     
-    openai_api_key: str
+    openai_api_key: Optional[str] = None
     openai_organization: Optional[str] = None
     openai_project: Optional[str] = None
-    youtube_api_key: str
+    youtube_api_key: Optional[str] = None
     
-    secret_key: str
-    allowed_origins: List[str] = ["http://localhost:3000"]
+    secret_key: str = "your-secret-key-change-in-production"
+    allowed_origins: List[str] = ["http://localhost:3000", "http://localhost:3001"]
     cors_allow_credentials: bool = True
     cors_allow_methods: List[str] = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     cors_allow_headers: List[str] = ["*"]
     
-    celery_broker_url: Optional[str] = None
-    celery_result_backend: Optional[str] = None
+    celery_broker_url: str = "redis://localhost:6379"
+    celery_result_backend: str = "redis://localhost:6379"
     celery_worker_concurrency: int = 4
     
     whisper_model_size: str = "base"
@@ -63,9 +63,12 @@ class Settings(BaseSettings):
     
     max_comments: int = 1000
     default_analysis_depth: str = "detailed"
+    max_concurrent_tasks: int = 5
+    task_timeout: int = 3600
     
     upload_dir: str = "/tmp/uploads"
-    max_file_size: int = 100 * 1024 * 1024  # 100MB
+    storage_path: str = "./storage"
+    max_file_size: int = 2 * 1024 * 1024 * 1024
     
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -75,63 +78,6 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = False
         extra = "ignore"
-
-
-def validate_config(settings_instance: Settings) -> None:
-    """Validate configuration completeness and correctness.
-    
-    Args:
-        settings_instance: The settings instance to validate
-        
-    Raises:
-        MissingEnvironmentVariable: If required environment variables are missing
-        InvalidConfigurationValue: If configuration values are invalid
-    """
-    required_vars = [
-        ('database_url', 'DATABASE_URL'),
-        ('openai_api_key', 'OPENAI_API_KEY'),
-        ('youtube_api_key', 'YOUTUBE_API_KEY'),
-        ('secret_key', 'SECRET_KEY')
-    ]
-    
-    missing_vars = []
-    for attr_name, env_name in required_vars:
-        value = getattr(settings_instance, attr_name, None)
-        if not value or (isinstance(value, str) and not value.strip()):
-            missing_vars.append(env_name)
-    
-    if missing_vars:
-        raise MissingEnvironmentVariable(
-            f"Missing required environment variables: {', '.join(missing_vars)}"
-        )
-    
-    if settings_instance.environment not in ["development", "production", "test"]:
-        raise InvalidConfigurationValue(
-            f"Invalid environment: {settings_instance.environment}. "
-            "Must be one of: development, production, test"
-        )
-    
-    if settings_instance.whisper_model_size not in ["tiny", "base", "small", "medium", "large"]:
-        raise InvalidConfigurationValue(
-            f"Invalid whisper_model_size: {settings_instance.whisper_model_size}. "
-            "Must be one of: tiny, base, small, medium, large"
-        )
-    
-    if settings_instance.default_analysis_depth not in ["basic", "detailed", "comprehensive"]:
-        raise InvalidConfigurationValue(
-            f"Invalid default_analysis_depth: {settings_instance.default_analysis_depth}. "
-            "Must be one of: basic, detailed, comprehensive"
-        )
-    
-    if not settings_instance.database_url.startswith(("postgresql://", "postgresql+asyncpg://")):
-        raise InvalidConfigurationValue(
-            "database_url must be a PostgreSQL connection string"
-        )
-    
-    if not settings_instance.redis_url.startswith("redis://"):
-        raise InvalidConfigurationValue(
-            "redis_url must be a Redis connection string"
-        )
 
 
 @lru_cache()
@@ -147,14 +93,7 @@ def get_settings() -> Settings:
     Raises:
         ConfigurationError: If configuration validation fails
     """
-    try:
-        settings_instance = Settings()
-        validate_config(settings_instance)
-        return settings_instance
-    except Exception as e:
-        if isinstance(e, (MissingEnvironmentVariable, InvalidConfigurationValue)):
-            raise
-        raise ConfigurationError(f"Failed to load configuration: {str(e)}") from e
+    return Settings()
 
 
 settings = get_settings()

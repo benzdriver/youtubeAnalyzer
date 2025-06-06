@@ -7,6 +7,7 @@ pydantic-settings==2.1.0
 # Database
 sqlalchemy==2.0.23
 alembic==1.12.1
+aiosqlite==0.19.0
 asyncpg==0.29.0
 
 # Task queue
@@ -24,6 +25,7 @@ openai-whisper==20231117
 # Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
+httpx==0.25.2
 
 # Additional dependencies for production
 gunicorn==21.2.0
