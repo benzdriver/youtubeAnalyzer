@@ -1,18 +1,27 @@
 import pytest
 import asyncio
+import os
+import sys
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 import uuid
 from datetime import datetime
 
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'backend'))
+
+os.environ['DATABASE_URL'] = 'postgresql+asyncpg://user:password@localhost:5432/youtube_analyzer'
+os.environ['REDIS_URL'] = 'redis://localhost:6379'
+os.environ['ENVIRONMENT'] = 'test'
+
 
 class TestDatabaseIntegration:
     """Test suite for database integration."""
     
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="session")
     def event_loop(self):
         """Create an instance of the default event loop for the test session."""
-        loop = asyncio.get_event_loop_policy().new_event_loop()
+        policy = asyncio.get_event_loop_policy()
+        loop = policy.new_event_loop()
         yield loop
         loop.close()
     
@@ -62,7 +71,8 @@ class TestDatabaseIntegration:
             
             created_task = await task_service.create_task(task_data)
             assert created_task is not None
-            assert created_task.video_url == task_data.video_url
+            assert created_task.video_url == str(task_data.video_url)
+            assert created_task.analysis_type == AnalysisType.COMPREHENSIVE
             assert created_task.status == TaskStatus.PENDING
             
             task_id = created_task.id
@@ -70,7 +80,7 @@ class TestDatabaseIntegration:
             retrieved_task = await task_service.get_task(task_id)
             assert retrieved_task is not None
             assert retrieved_task.id == task_id
-            assert retrieved_task.video_url == task_data.video_url
+            assert retrieved_task.video_url == str(task_data.video_url)
             
             await task_service.update_task_status(
                 task_id,

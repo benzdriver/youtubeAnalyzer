@@ -57,13 +57,13 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
+    tmpfs:
+      - /app/.next:rw,noexec,nosuid,size=100m
     depends_on:
       - backend
     networks:
       - youtube_analyzer_network
     restart: unless-stopped
-    tmpfs:
-      - /app/.next:rw,noexec,nosuid,size=100m
     logging:
       driver: "json-file"
       options:
