@@ -16,7 +16,7 @@ from app.services.task_service import TaskService
 router = APIRouter()
 
 
-@router.post("/", response_model=AnalysisTaskResponse)
+@router.post("/tasks", response_model=AnalysisTaskResponse)
 async def create_analysis_task(
     task_data: AnalysisTaskCreate,
     background_tasks: BackgroundTasks,
@@ -61,7 +61,7 @@ async def get_analysis_task(task_id: str, db: AsyncSession = Depends(get_db_sess
     )
 
 
-@router.get("/", response_model=List[AnalysisTaskResponse])
+@router.get("/tasks", response_model=List[AnalysisTaskResponse])
 async def list_analysis_tasks(
     status: Optional[TaskStatus] = None,
     limit: int = 50,

@@ -61,7 +61,7 @@ class TestDockerIntegration:
         
         try:
             result = subprocess.run(
-                ["docker-compose", "up", "-d", "--build"],
+                ["docker", "compose", "up", "-d", "--build"],
                 cwd=compose_dir,
                 capture_output=True,
                 text=True,
@@ -74,7 +74,7 @@ class TestDockerIntegration:
             time.sleep(30)
             
             result = subprocess.run(
-                ["docker-compose", "ps"],
+                ["docker", "compose", "ps"],
                 cwd=compose_dir,
                 capture_output=True,
                 text=True
@@ -110,7 +110,7 @@ class TestDockerIntegration:
         compose_dir = "/home/ubuntu/repos/youtubeAnalyzer"
         
         result = subprocess.run(
-            ["docker-compose", "exec", "-T", "backend", "python", "-c", 
+            ["docker", "compose", "exec", "-T", "backend", "python", "-c", 
              "from app.core.database import engine; import asyncio; asyncio.run(engine.dispose())"],
             cwd=compose_dir,
             capture_output=True,
@@ -126,7 +126,7 @@ class TestDockerIntegration:
         compose_dir = "/home/ubuntu/repos/youtubeAnalyzer"
         
         result = subprocess.run(
-            ["docker-compose", "exec", "-T", "backend", "python", "-c",
+            ["docker", "compose", "exec", "-T", "backend", "python", "-c",
              "import redis; r = redis.from_url('redis://redis:6379'); r.ping()"],
             cwd=compose_dir,
             capture_output=True,
@@ -169,7 +169,7 @@ class TestDockerIntegration:
         compose_dir = "/home/ubuntu/repos/youtubeAnalyzer"
         
         result = subprocess.run(
-            ["docker-compose", "exec", "-T", "backend", "python", "-c",
+            ["docker", "compose", "exec", "-T", "backend", "python", "-c",
              "import os; print(os.getenv('DATABASE_URL', 'NOT_SET'))"],
             cwd=compose_dir,
             capture_output=True,
@@ -186,7 +186,7 @@ class TestDockerIntegration:
         compose_dir = "/home/ubuntu/repos/youtubeAnalyzer"
         
         subprocess.run(
-            ["docker-compose", "down"],
+            ["docker", "compose", "down"],
             cwd=compose_dir,
             capture_output=True,
             text=True
@@ -195,7 +195,7 @@ class TestDockerIntegration:
         start_time = time.time()
         
         result = subprocess.run(
-            ["docker-compose", "up", "-d"],
+            ["docker", "compose", "up", "-d"],
             cwd=compose_dir,
             capture_output=True,
             text=True,
@@ -213,7 +213,7 @@ class TestDockerIntegration:
         compose_dir = "/home/ubuntu/repos/youtubeAnalyzer"
         
         result = subprocess.run(
-            ["docker-compose", "down"],
+            ["docker", "compose", "down"],
             cwd=compose_dir,
             capture_output=True,
             text=True,
@@ -223,7 +223,7 @@ class TestDockerIntegration:
         assert result.returncode == 0, f"docker-compose down failed: {result.stderr}"
         
         result = subprocess.run(
-            ["docker-compose", "ps"],
+            ["docker", "compose", "ps"],
             cwd=compose_dir,
             capture_output=True,
             text=True

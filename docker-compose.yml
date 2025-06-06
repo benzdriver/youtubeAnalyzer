@@ -45,12 +45,13 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-      - /app/.next
     depends_on:
       - backend
     networks:
       - youtube_analyzer_network
     restart: unless-stopped
+    tmpfs:
+      - /app/.next:rw,noexec,nosuid,size=100m
 
   postgres:
     image: postgres:15-alpine
@@ -133,7 +134,7 @@ services:
     networks:
       - youtube_analyzer_network
     restart: unless-stopped
-    command: celery -A app.core.celery beat --loglevel=info
+    command: celery -A app.core.celery beat --loglevel=info --schedule=/tmp/celerybeat-schedule --pidfile=/tmp/celerybeat.pid
 
 volumes:
   postgres_data:
@@ -141,6 +142,10 @@ volumes:
   redis_data:
     driver: local
   backend_uploads:
+    driver: local
+  frontend_next:
+    driver: local
+  celery_beat_schedule:
     driver: local
 
 networks:

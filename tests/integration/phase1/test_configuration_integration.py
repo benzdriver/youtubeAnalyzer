@@ -63,6 +63,7 @@ class TestConfigurationIntegration:
         
         settings = get_settings()
         
+        import asyncpg
         from sqlalchemy.ext.asyncio import create_async_engine
         engine = create_async_engine(
             settings.database_url,
@@ -187,17 +188,13 @@ class TestConfigurationIntegration:
             if value is not None:
                 assert value.lower() in ["true", "false"], f"Feature flag {flag} should be true or false"
     
-    def test_database_initialization(self):
+    @pytest.mark.asyncio
+    async def test_database_initialization(self):
         """Test database initialization process."""
-        import asyncio
         from app.core.database import init_db
         
-        async def test_init():
-            try:
-                await init_db()
-                return True
-            except Exception as e:
-                pytest.fail(f"Database initialization failed: {str(e)}")
-        
-        result = asyncio.run(test_init())
-        assert result is True
+        try:
+            await init_db()
+            assert True
+        except Exception as e:
+            pytest.fail(f"Database initialization failed: {str(e)}")
