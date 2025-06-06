@@ -1,5 +1,31 @@
 # Task 6: 内容分析模块 - Sub-Session Prompt
 
+## 必读文档
+
+**重要提示**: 开始此任务前，你必须阅读并理解以下文档：
+
+### 核心协调文档
+- `docs/TASK_COORDINATION.md` - 整体任务依赖关系和项目结构
+- `docs/ARCHITECTURE_OVERVIEW.md` - 系统架构和技术栈
+- `docs/CODING_STANDARDS.md` - 代码格式、命名规范和最佳实践
+- `docs/API_SPECIFICATIONS.md` - 完整API接口定义
+
+### 任务专用文档
+- `docs/tasks/TASK_06_CONTENT_ANALYSIS.md` - 详细任务要求和验收标准
+- `docs/contracts/content_analysis_contract.md` - 内容分析接口规范
+
+### 参考文档
+- `docs/DEVELOPMENT_SETUP.md` - 开发环境配置
+- `docs/PROGRESS_TRACKER.md` - 进度跟踪和任务状态更新
+
+### 依赖关系
+- Task 1 (项目配置) 必须先完成
+- Task 2 (后端API) 必须先完成
+- Task 5 (音频转录) 必须先完成
+- 查看 `docs/contracts/project_config_contract.md` 了解配置接口
+- 查看 `docs/contracts/api_framework_contract.md` 了解API接口
+- 查看 `docs/contracts/transcription_contract.md` 了解转录数据接口
+
 ## 项目背景
 
 你正在为YouTube视频分析工具构建内容分析模块。这个模块需要：
