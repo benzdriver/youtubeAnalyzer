@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     port: int = 8000
     reload: bool = False
     
-    database_url: str = "sqlite+aiosqlite:///./youtube_analyzer.db"
+    database_url: str = "postgresql+asyncpg://user:password@localhost:5432/youtube_analyzer"
     database_pool_size: int = 10
     database_max_overflow: int = 20
     
