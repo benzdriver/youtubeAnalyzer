@@ -15,16 +15,12 @@ class TaskService:
 
     async def create_task(self, task_data: AnalysisTaskCreate) -> AnalysisTask:
         """Create a new analysis task."""
-        analysis_type_enum = AnalysisType(task_data.analysis_type.lower())
-        
         task = AnalysisTask(
             id=str(uuid.uuid4()),
-            video_url=str(task_data.video_url),
-            analysis_type=analysis_type_enum,
+            youtube_url=str(task_data.video_url),
             status=TaskStatus.PENDING,
             progress=0,
-            options=task_data.options or {},
-            result_data={}
+            result_data=task_data.options or {}
         )
 
         self.db.add(task)

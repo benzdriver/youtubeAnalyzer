@@ -57,8 +57,7 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    tmpfs:
-      - /app/.next:rw,noexec,nosuid,size=100m
+      - frontend_next:/app/.next
     depends_on:
       - backend
     networks:
