@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../backend"))
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../backend"))
+sys.path.insert(0, backend_path)
 
 from app.core.database import get_db_session
 from app.models.task import Base
@@ -54,14 +55,14 @@ async def test_db():
         engine, class_=AsyncSession, expire_on_commit=False
     )
     
-    async def override_get_db():
+    async def override_get_db_session():
         async with TestSessionLocal() as session:
             try:
                 yield session
             finally:
                 await session.close()
     
-    app.dependency_overrides[get_db_session] = override_get_db
+    app.dependency_overrides[get_db_session] = override_get_db_session
     
     yield TestSessionLocal
     

@@ -6,14 +6,18 @@ import pytest
 import asyncio
 import time
 import json
+import os
+import sys
 from unittest.mock import AsyncMock, Mock, patch
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../backend"))
+sys.path.insert(0, backend_path)
+
 from app.main import app
 from app.models.task import AnalysisTask, TaskStatus, AnalysisType
 from app.api.v1.analysis import router as analysis_router
-from app.api.v1.tasks import router as tasks_router
 from fixtures.youtube_data import get_sample_video_info
 from fixtures.transcription_data import get_sample_transcription_result
 from fixtures.content_analysis_data import get_sample_content_analysis_result
