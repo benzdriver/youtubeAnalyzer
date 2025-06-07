@@ -2,12 +2,10 @@ import csv
 import io
 import json
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
 
-from app.models.schemas import AnalysisResult
 from app.services.analysis_service import AnalysisService
 
 router = APIRouter()
@@ -32,12 +30,11 @@ async def export_json(
         else:
             json_str = json.dumps(json_data, ensure_ascii=False)
 
+        filename = f"analysis_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         return Response(
             content=json_str,
             media_type="application/json",
-            headers={
-                "Content-Disposition": f"attachment; filename=analysis_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            },
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
@@ -112,12 +109,11 @@ async def export_csv(task_id: str):
         csv_content = output.getvalue()
         output.close()
 
+        filename = f"analysis_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
         return Response(
             content=csv_content,
             media_type="text/csv",
-            headers={
-                "Content-Disposition": f"attachment; filename=analysis_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-            },
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
@@ -137,7 +133,7 @@ async def export_summary(task_id: str):
         content_insights = getattr(result, "content_insights", {})
 
         summary_lines = [
-            f"YouTube Video Analysis Summary",
+            "YouTube Video Analysis Summary",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Task ID: {task_id}",
             "",
@@ -149,8 +145,14 @@ async def export_summary(task_id: str):
             "",
             "=== Content Analysis ===",
             f"Quality Score: {content_insights.get('quality_score', 0)}/100",
-            f"Overall Sentiment: {content_insights.get('sentiment', {}).get('overall', 'N/A')}",
-            f"Sentiment Score: {content_insights.get('sentiment', {}).get('score', 0):.2f}",
+            (
+                f"Overall Sentiment: "
+                f"{content_insights.get('sentiment', {}).get('overall', 'N/A')}"
+            ),
+            (
+                f"Sentiment Score: "
+                f"{content_insights.get('sentiment', {}).get('score', 0):.2f}"
+            ),
             "",
             "=== Summary ===",
             content_insights.get("summary", "No summary available"),
@@ -175,12 +177,14 @@ async def export_summary(task_id: str):
 
         summary_text = "\n".join(summary_lines)
 
+        filename = (
+            f"analysis_summary_{task_id}_"
+            f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        )
         return Response(
             content=summary_text,
             media_type="text/plain",
-            headers={
-                "Content-Disposition": f"attachment; filename=analysis_summary_{task_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-            },
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
@@ -209,11 +213,22 @@ async def share_result(
         sentiment = content_insights.get("sentiment", {}).get("overall", "neutral")
 
         if platform.lower() == "twitter":
-            share_text = f"📊 Analyzed '{title}' - Quality: {quality_score}/100, Sentiment: {sentiment} #YouTubeAnalysis #VideoInsights"
+            share_text = (
+                f"📊 Analyzed '{title}' - Quality: {quality_score}/100, "
+                f"Sentiment: {sentiment} #YouTubeAnalysis #VideoInsights"
+            )
         elif platform.lower() == "linkedin":
-            share_text = f"Just analyzed a YouTube video: '{title}'\n\n📈 Quality Score: {quality_score}/100\n😊 Sentiment: {sentiment}\n\nPowered by AI-driven video analysis."
+            share_text = (
+                f"Just analyzed a YouTube video: '{title}'\n\n"
+                f"📈 Quality Score: {quality_score}/100\n"
+                f"😊 Sentiment: {sentiment}\n\n"
+                "Powered by AI-driven video analysis."
+            )
         else:
-            share_text = f"Video Analysis: {title} - Quality: {quality_score}/100, Sentiment: {sentiment}"
+            share_text = (
+                f"Video Analysis: {title} - Quality: {quality_score}/100, "
+                f"Sentiment: {sentiment}"
+            )
 
         return {
             "platform": platform,

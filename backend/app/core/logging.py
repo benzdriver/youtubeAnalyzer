@@ -1,4 +1,3 @@
-import json
 import logging
 import logging.handlers
 import os
@@ -55,7 +54,8 @@ def setup_logging() -> None:
 
     if settings.log_json_format:
         formatter = ContainerAwareFormatter(
-            "%(timestamp)s %(service)s %(container_id)s %(name)s %(levelname)s %(funcName)s %(lineno)d %(message)s"
+            "%(timestamp)s %(service)s %(container_id)s %(name)s "
+            "%(levelname)s %(funcName)s %(lineno)d %(message)s"
         )
     else:
         formatter = logging.Formatter(settings.log_format)

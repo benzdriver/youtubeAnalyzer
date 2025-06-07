@@ -1,4 +1,3 @@
-import os
 from functools import lru_cache
 from typing import List, Optional
 
@@ -27,8 +26,8 @@ class Settings(BaseSettings):
     """Application configuration settings.
 
     This class manages all configuration settings for the YouTube Analyzer application.
-    It uses Pydantic BaseSettings to automatically load values from environment variables
-    and provides validation for required settings.
+    It uses Pydantic BaseSettings to automatically load values from environment
+    variables and provides validation for required settings.
     """
 
     app_name: str = "YouTube Analyzer"
