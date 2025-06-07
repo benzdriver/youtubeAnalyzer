@@ -64,10 +64,11 @@ async def test_db():
     
     app.dependency_overrides[get_db_session] = override_get_db_session
     
-    yield TestSessionLocal
-    
-    app.dependency_overrides.clear()
-    await engine.dispose()
+    try:
+        yield TestSessionLocal
+    finally:
+        app.dependency_overrides.clear()
+        await engine.dispose()
 
 @pytest.fixture
 def test_videos():

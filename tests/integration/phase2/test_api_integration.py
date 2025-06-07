@@ -46,13 +46,13 @@ class TestAPIIntegration:
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
         with patch('app.tasks.analysis_task.YouTubeExtractor', return_value=mock_youtube_extractor), \
-             patch('app.tasks.analysis_task.TranscriptionService', return_value=mock_transcription_service), \
-             patch('app.tasks.analysis_task.content_analyzer', mock_content_analyzer), \
-             patch('app.tasks.analysis_task.CommentAnalyzer', return_value=mock_comment_analyzer), \
+             patch('app.tasks.transcription.transcribe_audio_task', return_value=AsyncMock(return_value=get_sample_transcription_result())), \
+             patch('app.tasks.content_analysis.analyze_content_task', return_value=AsyncMock(return_value=get_sample_content_analysis_result())), \
+             patch('app.tasks.comment_analysis.analyze_comments_task', return_value=AsyncMock(return_value=get_sample_comment_analysis_result())), \
              patch('app.tasks.analysis_task.send_progress_update', mock_websocket_manager['progress']), \
              patch('app.tasks.analysis_task.send_task_completed', mock_websocket_manager['completed']):
 
-            response = self.client.post("/api/v1/analyze", json={
+            response = self.client.post("/api/v1/analysis/tasks", json={
                 "video_url": video_url,
                 "analysis_type": "full"
             })
@@ -87,7 +87,7 @@ class TestAPIIntegration:
             db.add(task)
             await db.commit()
 
-        response = self.client.get(f"/api/v1/tasks/{sample_task_id}")
+        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
         
         assert response.status_code == 200
         response_data = response.json()
@@ -127,7 +127,7 @@ class TestAPIIntegration:
             db.add(task)
             await db.commit()
 
-        response = self.client.get(f"/api/v1/tasks/{sample_task_id}")
+        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
         
         assert response.status_code == 200
         response_data = response.json()
@@ -156,7 +156,7 @@ class TestAPIIntegration:
         ]
         
         for invalid_url in invalid_urls:
-            response = self.client.post("/api/v1/analyze", json={
+            response = self.client.post("/api/v1/analysis/tasks", json={
                 "video_url": invalid_url,
                 "analysis_type": "full"
             })
@@ -172,7 +172,7 @@ class TestAPIIntegration:
         
         nonexistent_task_id = "nonexistent-task-12345"
         
-        response = self.client.get(f"/api/v1/tasks/{nonexistent_task_id}")
+        response = self.client.get(f"/api/v1/analysis/tasks/{nonexistent_task_id}")
         
         assert response.status_code == 404
         response_data = response.json()
@@ -200,7 +200,7 @@ class TestAPIIntegration:
             db.add(task)
             await db.commit()
 
-        response = self.client.get(f"/api/v1/tasks/{sample_task_id}")
+        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
         
         assert response.status_code == 200
         response_data = response.json()
@@ -221,14 +221,14 @@ class TestAPIIntegration:
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
         for valid_type in valid_types:
-            response = self.client.post("/api/v1/analyze", json={
+            response = self.client.post("/api/v1/analysis/tasks", json={
                 "video_url": video_url,
                 "analysis_type": valid_type
             })
             assert response.status_code == 200
         
         for invalid_type in invalid_types:
-            response = self.client.post("/api/v1/analyze", json={
+            response = self.client.post("/api/v1/analysis/tasks", json={
                 "video_url": video_url,
                 "analysis_type": invalid_type
             })
@@ -249,15 +249,15 @@ class TestAPIIntegration:
         """Test concurrent API requests handling"""
         
         with patch('app.tasks.analysis_task.YouTubeExtractor', return_value=mock_youtube_extractor), \
-             patch('app.tasks.analysis_task.TranscriptionService', return_value=mock_transcription_service), \
-             patch('app.tasks.analysis_task.content_analyzer', mock_content_analyzer), \
-             patch('app.tasks.analysis_task.CommentAnalyzer', return_value=mock_comment_analyzer), \
+             patch('app.tasks.transcription.transcribe_audio_task', return_value=AsyncMock(return_value=get_sample_transcription_result())), \
+             patch('app.tasks.content_analysis.analyze_content_task', return_value=AsyncMock(return_value=get_sample_content_analysis_result())), \
+             patch('app.tasks.comment_analysis.analyze_comments_task', return_value=AsyncMock(return_value=get_sample_comment_analysis_result())), \
              patch('app.tasks.analysis_task.send_progress_update', mock_websocket_manager['progress']), \
              patch('app.tasks.analysis_task.send_task_completed', mock_websocket_manager['completed']):
 
             responses = []
             for video_url in test_videos[:3]:  # Test first 3 videos
-                response = self.client.post("/api/v1/analyze", json={
+                response = self.client.post("/api/v1/analysis/tasks", json={
                     "video_url": video_url,
                     "analysis_type": "full"
                 })
@@ -300,7 +300,7 @@ class TestAPIIntegration:
             db.add(task)
             await db.commit()
 
-        response = self.client.get(f"/api/v1/tasks/{sample_task_id}")
+        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
         response_data = response.json()
         
         required_fields = ["id", "video_url", "analysis_type", "status", "progress", "created_at", "updated_at"]
@@ -362,7 +362,7 @@ class TestAPIIntegration:
         
         responses = []
         for i in range(10):  # Make 10 rapid requests
-            response = self.client.post("/api/v1/analyze", json={
+            response = self.client.post("/api/v1/analysis/tasks", json={
                 "video_url": video_url,
                 "analysis_type": "full"
             })
@@ -384,7 +384,7 @@ class TestAPIIntegration:
     async def test_api_cors_headers(self):
         """Test CORS headers in API responses"""
         
-        response = self.client.options("/api/v1/analyze")
+        response = self.client.options("/api/v1/analysis/tasks")
         
         assert response.status_code in [200, 204]
         
@@ -402,7 +402,7 @@ class TestAPIIntegration:
     async def test_api_content_type_validation(self):
         """Test API content type validation"""
         
-        response = self.client.post("/api/v1/analyze", 
+        response = self.client.post("/api/v1/analysis/tasks", 
                                   data="invalid_json_data",
                                   headers={"Content-Type": "text/plain"})
         
@@ -415,12 +415,12 @@ class TestAPIIntegration:
         
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
-        response_without_auth = self.client.post("/api/v1/analyze", json={
+        response_without_auth = self.client.post("/api/v1/analysis/tasks", json={
             "video_url": video_url,
             "analysis_type": "full"
         })
         
-        response_with_auth = self.client.post("/api/v1/analyze", 
+        response_with_auth = self.client.post("/api/v1/analysis/tasks", 
                                             json={
                                                 "video_url": video_url,
                                                 "analysis_type": "full"
@@ -435,7 +435,7 @@ class TestAPIIntegration:
     async def test_api_pagination_for_task_list(self):
         """Test API pagination for task listing endpoints"""
         
-        response = self.client.get("/api/v1/tasks?page=1&limit=10")
+        response = self.client.get("/api/v1/analysis/tasks?page=1&limit=10")
         
         if response.status_code == 200:
             response_data = response.json()
