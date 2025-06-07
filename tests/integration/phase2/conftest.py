@@ -47,54 +47,75 @@ def setup_test_environment():
 @pytest.fixture(scope="function", autouse=True)
 async def test_db():
     """Create test database for each test function."""
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    import tempfile
     
-    # Import all models to ensure they're registered with metadata
-    from app.models.task import AnalysisTask, TaskStatus, AnalysisType
-    
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        
-        result = await conn.run_sync(
-            lambda sync_conn: sync_conn.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table'")
-            ).fetchall()
-        )
-        tables = [row[0] for row in result]
-        print(f"Created tables: {tables}")
-        
-        if 'tasks' not in tables:
-            raise RuntimeError(f"Tasks table not created. Available tables: {tables}")
-    
-    TestSessionLocal = sessionmaker(
-        engine, class_=AsyncSession, expire_on_commit=False
-    )
-    
-    async def override_get_db_session():
-        async with TestSessionLocal() as session:
-            try:
-                yield session
-            finally:
-                await session.close()
-    
-    app.dependency_overrides[get_db_session] = override_get_db_session
+    db_fd, db_path = tempfile.mkstemp(suffix='.db')
+    os.close(db_fd)
     
     try:
-        yield TestSessionLocal
+        engine = create_async_engine(f"sqlite+aiosqlite:///{db_path}", echo=False)
+        
+        # Import all models to ensure they're registered with metadata
+        from app.models.task import AnalysisTask, TaskStatus, AnalysisType
+        
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            
+            result = await conn.run_sync(
+                lambda sync_conn: sync_conn.execute(
+                    text("SELECT name FROM sqlite_master WHERE type='table'")
+                ).fetchall()
+            )
+            tables = [row[0] for row in result]
+            print(f"Created tables: {tables}")
+            
+            if 'tasks' not in tables:
+                raise RuntimeError(f"Tasks table not created. Available tables: {tables}")
+        
+        TestSessionLocal = sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
+        
+        shared_session = TestSessionLocal()
+        
+        async def override_get_db_session():
+            try:
+                yield shared_session
+            except Exception:
+                await shared_session.rollback()
+                raise
+        
+        app.dependency_overrides[get_db_session] = override_get_db_session
+        
+        try:
+            yield TestSessionLocal
+        finally:
+            app.dependency_overrides.clear()
+            await engine.dispose()
     finally:
-        app.dependency_overrides.clear()
-        await engine.dispose()
+        if os.path.exists(db_path):
+            os.unlink(db_path)
 
 @pytest.fixture(scope="function")
 async def db_session(test_db):
     """Provide a database session for individual tests."""
     async for TestSessionLocal in test_db:
-        async with TestSessionLocal() as session:
-            try:
+        from app.core.database import get_db_session
+        override_func = app.dependency_overrides.get(get_db_session)
+        if override_func:
+            async for session in override_func():
                 yield session
-            finally:
-                await session.rollback()
-                await session.close()
+                break
+        else:
+            async with TestSessionLocal() as session:
+                try:
+                    yield session
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
+                    raise
+                finally:
+                    await session.close()
         break
 
 @pytest.fixture
