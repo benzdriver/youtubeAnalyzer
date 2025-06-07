@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from fastapi import WebSocket
 
@@ -45,7 +45,7 @@ websocket_manager = WebSocketManager()
 
 
 async def send_progress_update(
-    task_id: str, progress: int, message: str, current_step: str = None
+    task_id: str, progress: int, message: str, current_step: Optional[str] = None
 ):
     await websocket_manager.send_message(
         task_id,
