@@ -1,10 +1,11 @@
-import openai
-import logging
 import asyncio
+import logging
 import re
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
 from collections import Counter
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
+
+import openai
 
 from app.core.config import settings
 from app.utils.exceptions import AnalysisError

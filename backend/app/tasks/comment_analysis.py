@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select, update
 
@@ -8,7 +8,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.task import AnalysisTask, TaskStatus
 from app.services.comment_analyzer import CommentAnalyzer
 from app.services.youtube_extractor import YouTubeExtractor
-from app.utils.exceptions import ValidationError, AnalysisError
+from app.utils.exceptions import AnalysisError, ValidationError
 
 
 async def analyze_comments_task(

@@ -27,7 +27,9 @@ class AnalysisTask(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     video_url = Column(String, nullable=False)
-    analysis_type = Column(Enum(AnalysisType), default=AnalysisType.BASIC, nullable=False)
+    analysis_type = Column(
+        Enum(AnalysisType), default=AnalysisType.BASIC, nullable=False
+    )
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)
     current_step = Column(String)
     progress = Column(Integer, default=0)

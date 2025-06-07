@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
 from app.services.comment_analyzer import (
+    AuthorEngagement,
     CommentAnalyzer,
     CommentInsights,
     CommentTheme,
-    AuthorEngagement,
 )
 from app.utils.exceptions import AnalysisError
 

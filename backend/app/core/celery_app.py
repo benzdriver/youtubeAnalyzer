@@ -1,5 +1,6 @@
+from typing import Any, Dict, List, Optional
+
 from celery import Celery
-from typing import Optional, Dict, List, Any
 
 from app.core.config import settings
 
@@ -7,7 +8,12 @@ celery_app = Celery(
     "youtube_analyzer",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.tasks", "app.tasks.transcription", "app.tasks.content_analysis", "app.tasks.comment_analysis"],
+    include=[
+        "app.tasks",
+        "app.tasks.transcription",
+        "app.tasks.content_analysis",
+        "app.tasks.comment_analysis",
+    ],
 )
 
 celery_app.conf.update(
@@ -24,7 +30,9 @@ celery_app.conf.update(
     task_routes={
         "app.core.celery_app.analyze_video_task": {"queue": "analysis"},
         "app.tasks.transcription.transcribe_audio_task": {"queue": "transcription"},
-        "app.tasks.content_analysis.analyze_content_task": {"queue": "content_analysis"},
+        "app.tasks.content_analysis.analyze_content_task": {
+            "queue": "content_analysis"
+        },
         "app.core.celery_app.analyze_comments_celery_task": {"queue": "analysis"},
     },
     task_default_retry_delay=60,
@@ -35,6 +43,7 @@ celery_app.conf.update(
 @celery_app.task(bind=True)
 def analyze_video_task(self, task_id: str):
     import asyncio
+
     from app.tasks.analysis_task import run_analysis
 
     try:
@@ -55,6 +64,7 @@ def transcribe_audio_celery_task(
     self, task_id: str, audio_file_path: str, language: Optional[str] = None
 ):
     import asyncio
+
     from app.tasks.transcription import transcribe_audio_task
 
     try:
@@ -73,18 +83,24 @@ def transcribe_audio_celery_task(
 
 
 @celery_app.task(bind=True)
-def analyze_content_celery_task(self, task_id: str, transcript_data: dict, video_info: dict):
+def analyze_content_celery_task(
+    self, task_id: str, transcript_data: dict, video_info: dict
+):
     import asyncio
+
     from app.tasks.content_analysis import analyze_content_task
 
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        result = loop.run_until_complete(analyze_content_task(task_id, transcript_data, video_info))
+        result = loop.run_until_complete(
+            analyze_content_task(task_id, transcript_data, video_info)
+        )
         loop.close()
         return result
     except Exception as e:
         import logging
+
         logging.error(f"Content analysis task failed for {task_id}: {str(e)}")
         raise
 
@@ -97,6 +113,7 @@ def analyze_comments_celery_task(
     comments_data: Optional[List[Dict[str, Any]]] = None,
 ):
     import asyncio
+
     from app.tasks.comment_analysis import analyze_comments_task
 
     try:

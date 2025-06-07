@@ -1,4 +1,5 @@
 from celery import Celery
+
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -7,7 +8,7 @@ celery_app = Celery(
     "youtube_analyzer",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.services.tasks"]
+    include=["app.services.tasks"],
 )
 
 celery_app.conf.update(
