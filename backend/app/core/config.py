@@ -78,6 +78,12 @@ class Settings(BaseSettings):
     
     log_level: str = "INFO"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    enable_file_logging: bool = False
+    log_file_path: str = "logs/app.log"
+    log_sql_queries: bool = False
+    log_http_requests: bool = False
+    log_container_info: bool = True
+    log_json_format: bool = True
     
     class Config:
         env_file = ".env"

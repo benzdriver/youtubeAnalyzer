@@ -67,8 +67,12 @@ class TestAPIFrontendIntegration:
         assert response.status_code == 200
         
         data = response.json()
-        assert "success" in data
-        assert "data" in data
+        assert isinstance(data, list)
+        if len(data) > 0:
+            assert "id" in data[0]
+            assert "video_url" in data[0]
+            assert "analysis_type" in data[0]
+            assert "status" in data[0]
     
     @pytest.mark.asyncio
     async def test_websocket_connection(self, websocket_url):

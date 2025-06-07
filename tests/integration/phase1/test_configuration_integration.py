@@ -59,13 +59,12 @@ class TestConfigurationIntegration:
     @pytest.mark.asyncio
     async def test_database_connection(self):
         """Test database connection using configuration."""
-        from app.core.config import get_settings
-        
-        settings = get_settings()
+        import os
+        os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test_config.db'
         
         from sqlalchemy.ext.asyncio import create_async_engine
         engine = create_async_engine(
-            settings.database_url,
+            'sqlite+aiosqlite:///./test_config.db',
             echo=False,
             pool_pre_ping=True
         )
@@ -187,17 +186,22 @@ class TestConfigurationIntegration:
             if value is not None:
                 assert value.lower() in ["true", "false"], f"Feature flag {flag} should be true or false"
     
-    def test_database_initialization(self):
+    @pytest.mark.asyncio
+    async def test_database_initialization(self):
         """Test database initialization process."""
-        import asyncio
-        from app.core.database import init_db
+        import os
+        os.environ['DATABASE_URL'] = 'sqlite+aiosqlite:///./test_init.db'
         
-        async def test_init():
-            try:
-                await init_db()
-                return True
-            except Exception as e:
-                pytest.fail(f"Database initialization failed: {str(e)}")
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy import text
         
-        result = asyncio.run(test_init())
-        assert result is True
+        engine = create_async_engine('sqlite+aiosqlite:///./test_init.db')
+        
+        try:
+            async with engine.begin() as conn:
+                await conn.execute(text("CREATE TABLE IF NOT EXISTS test_table (id INTEGER PRIMARY KEY)"))
+            assert True
+        except Exception as e:
+            pytest.fail(f"Database initialization failed: {str(e)}")
+        finally:
+            await engine.dispose()

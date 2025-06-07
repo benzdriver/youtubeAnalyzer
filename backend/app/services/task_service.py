@@ -5,20 +5,24 @@ from typing import List, Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import AnalysisTask, TaskStatus
+from app.models.task import AnalysisTask, TaskStatus, AnalysisType
+from app.models.schemas import AnalysisTaskCreate
 
 
 class TaskService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def create_task(self, youtube_url: str, options: dict = None) -> AnalysisTask:
+    async def create_task(self, task_data: AnalysisTaskCreate) -> AnalysisTask:
+        """Create a new analysis task."""
         task = AnalysisTask(
             id=str(uuid.uuid4()),
-            youtube_url=youtube_url,
+            video_url=str(task_data.video_url),
+            analysis_type=task_data.analysis_type,
             status=TaskStatus.PENDING,
             progress=0,
-            result_data=options or {},
+            options=task_data.options or {},
+            result_data={}
         )
 
         self.db.add(task)
@@ -31,6 +35,12 @@ class TaskService:
             select(AnalysisTask).where(AnalysisTask.id == task_id)
         )
         return result.scalar_one_or_none()
+
+    async def get_tasks(
+        self, status: Optional[TaskStatus] = None, limit: int = 50, offset: int = 0
+    ) -> List[AnalysisTask]:
+        """Get tasks with optional filtering."""
+        return await self.list_tasks(status, limit, offset)
 
     async def list_tasks(
         self, status: Optional[TaskStatus] = None, limit: int = 50, offset: int = 0

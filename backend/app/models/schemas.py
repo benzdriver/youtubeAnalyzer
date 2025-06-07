@@ -7,16 +7,19 @@ from .task import TaskStatus
 
 
 class AnalysisTaskCreate(BaseModel):
-    youtube_url: HttpUrl
+    video_url: HttpUrl
+    analysis_type: str = "basic"
     options: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class AnalysisTaskResponse(BaseModel):
     id: str
-    youtube_url: str
+    video_url: str
+    analysis_type: str
     status: TaskStatus
     current_step: Optional[str] = None
     progress: int = 0
+    options: Optional[Dict[str, Any]] = None
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None

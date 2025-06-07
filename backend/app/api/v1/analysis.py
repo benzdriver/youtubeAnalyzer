@@ -16,52 +16,32 @@ from app.services.task_service import TaskService
 router = APIRouter()
 
 
-@router.post("/", response_model=AnalysisTaskResponse)
+@router.post("/tasks", response_model=AnalysisTaskResponse)
 async def create_analysis_task(
     task_data: AnalysisTaskCreate,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db_session),
 ):
     task_service = TaskService(db)
-    task = await task_service.create_task(
-        youtube_url=str(task_data.youtube_url), options=task_data.options
-    )
+    task = await task_service.create_task(task_data)
 
     background_tasks.add_task(task_service.start_analysis, task.id)
 
     return AnalysisTaskResponse(
         id=task.id,
-        youtube_url=task.youtube_url,
+        video_url=task.video_url,
+        analysis_type=task.analysis_type.value,
         status=task.status,
         current_step=task.current_step,
         progress=task.progress,
+        options=task.options,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at,
     )
 
 
-@router.get("/{task_id}", response_model=AnalysisTaskResponse)
-async def get_analysis_task(task_id: str, db: AsyncSession = Depends(get_db_session)):
-    task_service = TaskService(db)
-    task = await task_service.get_task(task_id)
-
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    return AnalysisTaskResponse(
-        id=task.id,
-        youtube_url=task.youtube_url,
-        status=task.status,
-        current_step=task.current_step,
-        progress=task.progress,
-        created_at=task.created_at,
-        updated_at=task.updated_at,
-        completed_at=task.completed_at,
-    )
-
-
-@router.get("/", response_model=List[AnalysisTaskResponse])
+@router.get("/tasks", response_model=List[AnalysisTaskResponse])
 async def list_analysis_tasks(
     status: Optional[TaskStatus] = None,
     limit: int = 50,
@@ -74,16 +54,40 @@ async def list_analysis_tasks(
     return [
         AnalysisTaskResponse(
             id=task.id,
-            youtube_url=task.youtube_url,
+            video_url=task.video_url,
+            analysis_type=task.analysis_type.value,
             status=task.status,
             current_step=task.current_step,
             progress=task.progress,
+            options=task.options,
             created_at=task.created_at,
             updated_at=task.updated_at,
             completed_at=task.completed_at,
         )
         for task in tasks
     ]
+
+
+@router.get("/{task_id}", response_model=AnalysisTaskResponse)
+async def get_analysis_task(task_id: str, db: AsyncSession = Depends(get_db_session)):
+    task_service = TaskService(db)
+    task = await task_service.get_task(task_id)
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return AnalysisTaskResponse(
+        id=task.id,
+        video_url=task.video_url,
+        analysis_type=task.analysis_type.value,
+        status=task.status,
+        current_step=task.current_step,
+        progress=task.progress,
+        options=task.options,
+        created_at=task.created_at,
+        updated_at=task.updated_at,
+        completed_at=task.completed_at,
+    )
 
 
 @router.get("/{task_id}/result", response_model=AnalysisResult)
@@ -105,7 +109,7 @@ async def get_analysis_result(task_id: str, db: AsyncSession = Depends(get_db_se
             "completed_at": (
                 task.completed_at.isoformat() if task.completed_at else None
             ),
-            "youtube_url": task.youtube_url,
+            "video_url": task.video_url,
         },
     )
 
@@ -130,10 +134,12 @@ async def update_task_status(
 
     return AnalysisTaskResponse(
         id=task.id,
-        youtube_url=task.youtube_url,
+        video_url=task.video_url,
+        analysis_type=task.analysis_type.value,
         status=task.status,
         current_step=task.current_step,
         progress=task.progress,
+        options=task.options,
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at,

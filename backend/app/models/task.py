@@ -16,14 +16,22 @@ class TaskStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class AnalysisType(str, enum.Enum):
+    BASIC = "basic"
+    DETAILED = "detailed"
+    COMPREHENSIVE = "comprehensive"
+
+
 class AnalysisTask(Base):
-    __tablename__ = "analysis_tasks"
+    __tablename__ = "tasks"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    youtube_url = Column(String, nullable=False)
+    video_url = Column(String, nullable=False)
+    analysis_type = Column(Enum(AnalysisType), default=AnalysisType.BASIC, nullable=False)
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)
     current_step = Column(String)
     progress = Column(Integer, default=0)
+    options = Column(JSON)
     result_data = Column(JSON)
     error_message = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -35,10 +43,12 @@ class AnalysisTask(Base):
     def to_dict(self):
         return {
             "id": self.id,
-            "youtube_url": self.youtube_url,
+            "video_url": self.video_url,
+            "analysis_type": self.analysis_type.value,
             "status": self.status.value,
             "current_step": self.current_step,
             "progress": self.progress,
+            "options": self.options,
             "result_data": self.result_data,
             "error_message": self.error_message,
             "created_at": self.created_at.isoformat() if self.created_at else None,
