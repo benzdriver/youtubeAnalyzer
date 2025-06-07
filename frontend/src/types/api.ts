@@ -95,3 +95,36 @@ export interface FilterParams {
 export interface SearchParams extends PaginationParams, FilterParams {
   query?: string;
 }
+
+export enum ExportFormat {
+  PDF = 'pdf',
+  DOCX = 'docx',
+  JSON = 'json',
+  CSV = 'csv',
+  XLSX = 'xlsx',
+  HTML = 'html'
+}
+
+export interface ExportOptions {
+  format: ExportFormat;
+  sections: ExportSection[];
+  includeCharts: boolean;
+  includeRawData: boolean;
+  template?: string;
+  customization?: ExportCustomization;
+}
+
+export interface ExportSection {
+  id: string;
+  name: string;
+  included: boolean;
+  options?: any;
+}
+
+export interface ExportCustomization {
+  title?: string;
+  subtitle?: string;
+  logo?: string;
+  colors?: string[];
+  fonts?: string[];
+}
