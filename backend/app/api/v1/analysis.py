@@ -38,6 +38,8 @@ async def create_analysis_task(
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at,
+        result_data=task.result_data,
+        error_message=task.error_message,
     )
 
 
@@ -68,7 +70,7 @@ async def list_analysis_tasks(
     ]
 
 
-@router.get("/{task_id}", response_model=AnalysisTaskResponse)
+@router.get("/tasks/{task_id}", response_model=AnalysisTaskResponse)
 async def get_analysis_task(task_id: str, db: AsyncSession = Depends(get_db_session)):
     task_service = TaskService(db)
     task = await task_service.get_task(task_id)
@@ -87,10 +89,12 @@ async def get_analysis_task(task_id: str, db: AsyncSession = Depends(get_db_sess
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at,
+        result_data=task.result_data,
+        error_message=task.error_message,
     )
 
 
-@router.get("/{task_id}/result", response_model=AnalysisResult)
+@router.get("/tasks/{task_id}/result", response_model=AnalysisResult)
 async def get_analysis_result(task_id: str, db: AsyncSession = Depends(get_db_session)):
     task_service = TaskService(db)
     task = await task_service.get_task(task_id)
@@ -114,7 +118,7 @@ async def get_analysis_result(task_id: str, db: AsyncSession = Depends(get_db_se
     )
 
 
-@router.patch("/{task_id}/status", response_model=AnalysisTaskResponse)
+@router.patch("/tasks/{task_id}/status", response_model=AnalysisTaskResponse)
 async def update_task_status(
     task_id: str,
     status_update: TaskStatusUpdate,
@@ -143,10 +147,12 @@ async def update_task_status(
         created_at=task.created_at,
         updated_at=task.updated_at,
         completed_at=task.completed_at,
+        result_data=task.result_data,
+        error_message=task.error_message,
     )
 
 
-@router.delete("/{task_id}")
+@router.delete("/tasks/{task_id}")
 async def cancel_analysis_task(
     task_id: str, db: AsyncSession = Depends(get_db_session)
 ):
