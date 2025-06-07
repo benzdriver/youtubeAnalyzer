@@ -28,17 +28,17 @@ from app.utils.exceptions import YouTubeAnalyzerError
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """
     Application lifespan manager.
-    
+
     Handles startup and shutdown events for the FastAPI application.
     """
     settings = get_settings()
-    
+
     print(f"Starting {settings.app_name} in {settings.environment} mode")
     await init_db()
     logging.info("Application started")
-    
+
     yield
-    
+
     print(f"Shutting down {settings.app_name}")
     logging.info("Application shutting down")
 
@@ -46,12 +46,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     """
     Create and configure the FastAPI application.
-    
+
     Returns:
         FastAPI: Configured FastAPI application instance
     """
     settings = get_settings()
-    
+
     app = FastAPI(
         title=settings.app_name,
         description="AI-powered YouTube video analysis platform",
@@ -61,7 +61,7 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.debug else None,
         redoc_url="/redoc" if settings.debug else None,
     )
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.allowed_origins,
@@ -70,13 +70,13 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(GZipMiddleware, minimum_size=1000)
-    
+
     if not settings.debug:
         app.add_middleware(
             TrustedHostMiddleware,
-            allowed_hosts=["*"]  # Configure appropriately for production
+            allowed_hosts=["*"],  # Configure appropriately for production
         )
-    
+
     @app.middleware("http")
     async def log_requests(request: Request, call_next):
         start_time = time.time()
@@ -130,10 +130,10 @@ def create_app() -> FastAPI:
                 "service": settings.app_name,
                 "environment": settings.environment,
                 "version": "1.0.0",
-                "timestamp": time.time()
+                "timestamp": time.time(),
             }
         )
-    
+
     @app.get("/")
     async def root():
         """Root endpoint with basic API information."""
@@ -141,11 +141,15 @@ def create_app() -> FastAPI:
             content={
                 "message": f"Welcome to {settings.app_name}",
                 "version": "1.0.0",
-                "docs": "/docs" if settings.debug else "Documentation disabled in production",
-                "health": "/health"
+                "docs": (
+                    "/docs"
+                    if settings.debug
+                    else "Documentation disabled in production"
+                ),
+                "health": "/health",
             }
         )
-    
+
     return app
 
 
@@ -154,9 +158,9 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     settings = get_settings()
-    
+
     uvicorn.run(
         "app.main:app",
         host="0.0.0.0",

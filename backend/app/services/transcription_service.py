@@ -1,10 +1,11 @@
-import whisper
-import os
-import logging
 import asyncio
-from typing import Dict, List, Any, Optional, cast
+import logging
+import os
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, cast
+
 import torch
+import whisper
 
 from app.core.config import settings
 from app.utils.exceptions import ExternalServiceError, ValidationError

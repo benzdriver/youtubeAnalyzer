@@ -5,8 +5,8 @@ from typing import List, Optional
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.task import AnalysisTask, TaskStatus, AnalysisType
 from app.models.schemas import AnalysisTaskCreate
+from app.models.task import AnalysisTask, AnalysisType, TaskStatus
 
 
 class TaskService:
@@ -22,7 +22,7 @@ class TaskService:
             status=TaskStatus.PENDING,
             progress=0,
             options=task_data.options or {},
-            result_data={}
+            result_data={},
         )
 
         self.db.add(task)

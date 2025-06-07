@@ -1,11 +1,12 @@
-import pytest
 from unittest.mock import Mock, patch
 
+import pytest
+
 from app.services.comment_analyzer import (
+    AuthorEngagement,
     CommentAnalyzer,
     CommentInsights,
     CommentTheme,
-    AuthorEngagement,
 )
 from app.utils.exceptions import AnalysisError
 
@@ -93,9 +94,9 @@ class TestCommentAnalyzer:
         """测试成功的评论分析"""
         mock_sentiment_response = Mock()
         mock_sentiment_response.choices = [Mock()]
-        mock_sentiment_response.choices[0].message.content = (
-            '{"positive": 2, "negative": 1, "neutral": 1}'
-        )
+        mock_sentiment_response.choices[
+            0
+        ].message.content = '{"positive": 2, "negative": 1, "neutral": 1}'
 
         mock_themes_response = Mock()
         mock_themes_response.choices = [Mock()]
@@ -115,9 +116,9 @@ class TestCommentAnalyzer:
 
         mock_author_sentiment_response = Mock()
         mock_author_sentiment_response.choices = [Mock()]
-        mock_author_sentiment_response.choices[0].message.content = (
-            '{"positive": 1, "negative": 0, "neutral": 0}'
-        )
+        mock_author_sentiment_response.choices[
+            0
+        ].message.content = '{"positive": 1, "negative": 0, "neutral": 0}'
 
         with patch.object(analyzer.client.chat.completions, "create") as mock_create:
             mock_create.side_effect = [
@@ -193,9 +194,9 @@ class TestCommentAnalyzer:
         """测试情感分析"""
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = (
-            '{"positive": 2, "negative": 1, "neutral": 1}'
-        )
+        mock_response.choices[
+            0
+        ].message.content = '{"positive": 2, "negative": 1, "neutral": 1}'
 
         with patch.object(
             analyzer.client.chat.completions, "create", return_value=mock_response
@@ -246,9 +247,9 @@ class TestCommentAnalyzer:
         """测试作者互动分析"""
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = (
-            '{"positive": 1, "negative": 0, "neutral": 0}'
-        )
+        mock_response.choices[
+            0
+        ].message.content = '{"positive": 1, "negative": 0, "neutral": 0}'
 
         with patch.object(
             analyzer.client.chat.completions, "create", return_value=mock_response

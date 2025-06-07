@@ -1,0 +1,312 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+    
+    - name: Run backend linting
+      run: |
+        cd backend
+        black --check .
+        isort --check-only .
+        flake8 .
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        pytest --cov=app --cov-report=xml --cov-report=term-missing
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379
+        SECRET_KEY: test-secret-key-for-ci
+        OPENAI_API_KEY: test-key
+        YOUTUBE_API_KEY: test-key
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run frontend linting
+      run: |
+        cd frontend
+        npm run lint
+    
+    - name: Run frontend type checking
+      run: |
+        cd frontend
+        npm run type-check
+    
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm run test
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+      env:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+        NEXT_PUBLIC_WS_URL: ws://localhost:8000
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  build-images:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Extract metadata for backend
+      id: meta-backend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/backend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push backend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile.prod
+        push: true
+        tags: ${{ steps.meta-backend.outputs.tags }}
+        labels: ${{ steps.meta-backend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Extract metadata for frontend
+      id: meta-frontend
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/frontend
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
+    - name: Build and push frontend image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        target: runner
+        push: true
+        tags: ${{ steps.meta-frontend.outputs.tags }}
+        labels: ${{ steps.meta-frontend.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-images]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          set -e
+          
+          # Navigate to deployment directory
+          cd /opt/youtube-analyzer
+          
+          # Pull latest code
+          git fetch origin
+          git reset --hard origin/main
+          
+          # Create backup of current deployment
+          docker-compose -f docker-compose.prod.yml down || true
+          
+          # Pull latest images
+          docker-compose -f docker-compose.prod.yml pull
+          
+          # Start services
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          # Wait for services to be ready
+          sleep 30
+          
+          # Run database migrations
+          docker-compose -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          
+          # Clean up old images
+          docker system prune -f
+    
+    - name: Health check
+      run: |
+        sleep 60
+        max_attempts=10
+        attempt=1
+        
+        while [ $attempt -le $max_attempts ]; do
+          echo "Health check attempt $attempt/$max_attempts"
+          
+          if curl -f --max-time 10 ${{ secrets.PROD_URL }}/health; then
+            echo "✅ Health check passed"
+            exit 0
+          fi
+          
+          echo "❌ Health check failed, retrying in 30 seconds..."
+          sleep 30
+          attempt=$((attempt + 1))
+        done
+        
+        echo "❌ Health check failed after $max_attempts attempts"
+        exit 1
+    
+    - name: Notify deployment status
+      if: always()
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        channel: '#deployments'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK }}
+
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [deploy]
+    environment: production
+    
+    steps:
+    - name: Rollback deployment
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USER }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          set -e
+          
+          cd /opt/youtube-analyzer
+          
+          # Get the previous successful commit
+          PREVIOUS_COMMIT=$(git log --format="%H" -n 2 | tail -1)
+          
+          echo "Rolling back to commit: $PREVIOUS_COMMIT"
+          
+          # Checkout previous commit
+          git reset --hard $PREVIOUS_COMMIT
+          
+          # Restart services with previous version
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          echo "Rollback completed"

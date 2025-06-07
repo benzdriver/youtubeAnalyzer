@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy import select, update
 
@@ -8,7 +8,7 @@ from app.core.database import AsyncSessionLocal
 from app.models.task import AnalysisTask, TaskStatus
 from app.services.comment_analyzer import CommentAnalyzer
 from app.services.youtube_extractor import YouTubeExtractor
-from app.utils.exceptions import ValidationError, AnalysisError
+from app.utils.exceptions import AnalysisError, ValidationError
 
 
 async def analyze_comments_task(
@@ -33,9 +33,7 @@ async def analyze_comments_task(
                 if not task:
                     raise ValidationError(f"Task not found: {task_id}")
 
-                await send_progress_update(
-                    task_id, 10, "初始化评论分析服务", "初始化评论分析"
-                )
+                await send_progress_update(task_id, 10, "初始化评论分析服务", "初始化评论分析")
 
                 await send_progress_update(task_id, 20, "获取视频信息", "视频信息获取")
 
@@ -51,9 +49,7 @@ async def analyze_comments_task(
                 }
 
                 if not comments_data:
-                    await send_progress_update(
-                        task_id, 30, "提取评论数据", "评论数据提取"
-                    )
+                    await send_progress_update(task_id, 30, "提取评论数据", "评论数据提取")
 
                     comments_list = await youtube_extractor.get_comments(
                         video_id, max_results=1000
@@ -154,9 +150,7 @@ async def analyze_comments_task(
                     logging.error(f"Failed to update task status: {db_error}")
 
                 try:
-                    await send_progress_update(
-                        task_id, 0, f"评论分析失败: {str(e)}", "分析失败"
-                    )
+                    await send_progress_update(task_id, 0, f"评论分析失败: {str(e)}", "分析失败")
                 except Exception as ws_error:
                     logging.error(f"Failed to send failure notification: {ws_error}")
 
