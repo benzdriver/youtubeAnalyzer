@@ -59,7 +59,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   className
 }) => {
   const [elapsedTime, setElapsedTime] = useState(0);
-  const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
+  const [estimatedTimeRemaining] = useState<number | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -150,7 +150,7 @@ export const ProgressTracker: React.FC<ProgressTrackerProps> = ({
           {showDetails && (
             <div className="space-y-3">
               <h3 className="font-medium text-gray-900 mb-3">详细步骤</h3>
-              {steps.map((step, index) => (
+              {steps.map((step) => (
                 <div
                   key={step.id}
                   className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${

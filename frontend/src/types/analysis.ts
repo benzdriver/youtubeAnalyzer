@@ -135,3 +135,32 @@ export interface ValidationRule {
 
 export type ExportFormat = 'json' | 'csv' | 'pdf' | 'txt';
 export type SharePlatform = 'twitter' | 'linkedin' | 'email' | 'copy';
+
+export interface SentimentDistribution {
+  positive: number;
+  negative: number;
+  neutral: number;
+  mixed?: number;
+}
+
+export interface TopicData {
+  word: string;
+  weight: number;
+  category?: string;
+  color?: string;
+}
+
+export interface TimelinePoint {
+  timestamp: number;
+  value: number;
+  label?: string;
+  type?: 'content' | 'comment' | 'engagement';
+  metadata?: any;
+}
+
+export interface EngagementPoint {
+  time: Date;
+  value: number;
+  type: 'likes' | 'comments' | 'replies';
+  details?: any;
+}

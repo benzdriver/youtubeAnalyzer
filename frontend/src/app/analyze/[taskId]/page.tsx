@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useAnalysisStore } from '@/store/analysisStore';
 import { useAnalysisWebSocket } from '@/hooks/useWebSocket';
 import { ProgressTracker } from '@/components/analysis/ProgressTracker';
+import { ResultDisplay } from '@/components/analysis/ResultDisplay';
 import { Card, Button } from '@/components/ui';
 import { TaskStatus } from '@/types/analysis';
 
@@ -111,95 +112,10 @@ export default function AnalyzePage() {
             </Card>
 
             {task.status === TaskStatus.COMPLETED && task.result && (
-              <Card>
-                <div className="p-6">
-                  <h2 className="text-xl font-semibold mb-4">分析结果</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-medium mb-3">视频详情</h3>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="text-gray-600">标题:</span>
-                          <span className="ml-2">{task.result.videoInfo.title}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">频道:</span>
-                          <span className="ml-2">{task.result.videoInfo.channelTitle}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">时长:</span>
-                          <span className="ml-2">{Math.floor(task.result.videoInfo.duration / 60)}分钟</span>
-                        </div>
-                        {task.result.videoInfo.viewCount && (
-                          <div>
-                            <span className="text-gray-600">观看次数:</span>
-                            <span className="ml-2">{task.result.videoInfo.viewCount.toLocaleString()}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="font-medium mb-3">内容洞察</h3>
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="text-gray-600">质量评分:</span>
-                          <span className="ml-2">{task.result.contentInsights.qualityScore}/100</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">情感倾向:</span>
-                          <span className="ml-2">{task.result.contentInsights.sentiment.overall}</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">关键要点:</span>
-                          <span className="ml-2">{task.result.contentInsights.keyPoints.length}个</span>
-                        </div>
-                        <div>
-                          <span className="text-gray-600">主题标签:</span>
-                          <span className="ml-2">{task.result.contentInsights.topics.length}个</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-6 border-t">
-                    <h3 className="font-medium mb-3">内容摘要</h3>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {task.result.contentInsights.summary}
-                    </p>
-                  </div>
-
-                  {task.result.contentInsights.keyPoints.length > 0 && (
-                    <div className="mt-6 pt-6 border-t">
-                      <h3 className="font-medium mb-3">关键要点</h3>
-                      <div className="space-y-3">
-                        {task.result.contentInsights.keyPoints.slice(0, 5).map((point, index) => (
-                          <div key={index} className="flex items-start space-x-3">
-                            <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-xs font-medium">
-                              {index + 1}
-                            </span>
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-700">{point.content}</p>
-                              <span className="text-xs text-gray-500">
-                                {Math.floor(point.timestamp / 60)}:{(point.timestamp % 60).toString().padStart(2, '0')}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="mt-6 pt-6 border-t flex justify-center space-x-4">
-                    <Button onClick={() => window.location.href = '/'}>
-                      开始新分析
-                    </Button>
-                    <Button variant="outline" onClick={() => window.location.href = '/history'}>
-                      查看历史
-                    </Button>
-                  </div>
-                </div>
-              </Card>
+              <ResultDisplay 
+                result={task.result}
+                videoUrl={task.input.youtube_url}
+              />
             )}
 
             {task.status === TaskStatus.FAILED && (
