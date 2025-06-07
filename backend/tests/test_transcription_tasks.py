@@ -76,7 +76,6 @@ async def test_transcribe_audio_task_success(
             )
 
             with patch("app.tasks.transcription.send_progress_update") as mock_progress:
-
                 result = await transcribe_audio_task(
                     "test-task-id", "/path/to/audio.wav"
                 )
@@ -127,7 +126,6 @@ async def test_transcribe_audio_task_with_provided_language(
             )
 
             with patch("app.tasks.transcription.send_progress_update"):
-
                 result = await transcribe_audio_task(
                     "test-task-id", "/path/to/audio.wav", language="zh"
                 )
@@ -173,7 +171,6 @@ async def test_transcribe_audio_task_low_language_confidence(
             )
 
             with patch("app.tasks.transcription.send_progress_update"):
-
                 result = await transcribe_audio_task(
                     "test-task-id", "/path/to/audio.wav"
                 )
@@ -221,7 +218,6 @@ async def test_transcribe_audio_task_invalid_audio_file(
             mock_service.validate_audio_file.return_value = False
 
             with patch("app.tasks.transcription.send_progress_update"):
-
                 with pytest.raises(ValidationError, match="音频文件无效"):
                     await transcribe_audio_task("test-task-id", "/path/to/invalid.wav")
 
@@ -255,7 +251,6 @@ async def test_transcribe_audio_task_transcription_failure(
             )
 
             with patch("app.tasks.transcription.send_progress_update"):
-
                 with pytest.raises(ExternalServiceError, match="Transcription failed"):
                     await transcribe_audio_task("test-task-id", "/path/to/audio.wav")
 
@@ -292,7 +287,6 @@ async def test_transcribe_audio_task_database_update(
             )
 
             with patch("app.tasks.transcription.send_progress_update"):
-
                 await transcribe_audio_task("test-task-id", "/path/to/audio.wav")
 
                 assert (
@@ -330,7 +324,6 @@ async def test_transcribe_audio_task_progress_updates(
             )
 
             with patch("app.tasks.transcription.send_progress_update") as mock_progress:
-
                 await transcribe_audio_task("test-task-id", "/path/to/audio.wav")
 
                 progress_calls = mock_progress.call_args_list

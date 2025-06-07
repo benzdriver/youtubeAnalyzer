@@ -109,7 +109,6 @@ async def test_analyze_content_task_success(
         patch("app.tasks.content_analysis.select") as mock_select,
         patch("app.tasks.content_analysis.update") as mock_update,
     ):
-
         mock_db = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = mock_db
 
@@ -152,7 +151,6 @@ async def test_analyze_content_task_missing_task():
         patch("app.tasks.content_analysis.AsyncSessionLocal") as mock_session_local,
         patch("app.tasks.content_analysis.send_task_failed") as mock_send_failed,
     ):
-
         mock_db = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = mock_db
         mock_db.execute.return_value.scalar_one_or_none.return_value = None
@@ -171,7 +169,6 @@ async def test_analyze_content_task_empty_transcript():
         patch("app.tasks.content_analysis.AsyncSessionLocal") as mock_session_local,
         patch("app.tasks.content_analysis.send_task_failed") as mock_send_failed,
     ):
-
         mock_db = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = mock_db
 
@@ -193,7 +190,6 @@ async def test_content_insights_serialization(sample_content_insights):
         patch("app.tasks.content_analysis.content_analyzer") as mock_analyzer,
         patch("app.tasks.content_analysis.send_progress_update") as mock_progress,
     ):
-
         mock_db = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = mock_db
 
@@ -241,7 +237,6 @@ async def test_analyzer_failure_handling(sample_transcript_data, sample_video_in
         patch("app.tasks.content_analysis.send_task_failed") as mock_send_failed,
         patch("app.tasks.content_analysis.send_progress_update") as mock_progress,
     ):
-
         mock_db = AsyncMock()
         mock_session_local.return_value.__aenter__.return_value = mock_db
 

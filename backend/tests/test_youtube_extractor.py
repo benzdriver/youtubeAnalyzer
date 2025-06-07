@@ -334,7 +334,6 @@ class TestFileCleanup:
         test_file = "/tmp/test_audio.wav"
 
         with patch("os.path.exists") as mock_exists, patch("os.remove") as mock_remove:
-
             mock_exists.return_value = True
             extractor.cleanup_audio_file(test_file)
 
@@ -370,7 +369,6 @@ class TestInitialization:
             patch("app.services.youtube_extractor.build") as mock_build,
             patch("os.makedirs") as mock_makedirs,
         ):
-
             mock_settings.youtube_api_key = "test_key"
             mock_settings.storage_path = "/tmp/test"
             mock_build.return_value = Mock()

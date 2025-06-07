@@ -448,9 +448,7 @@ class CommentAnalyzer:
             if total_sentiment > 0:
                 negative_ratio = sentiment_dist.get("negative", 0) / total_sentiment
                 if negative_ratio > 0.3:
-                    recommendations.append(
-                        "负面评论较多，建议关注观众反馈并改进内容质量"
-                    )
+                    recommendations.append("负面评论较多，建议关注观众反馈并改进内容质量")
                 elif negative_ratio < 0.1:
                     recommendations.append("观众反馈非常积极，可以继续保持当前内容风格")
 
@@ -465,9 +463,7 @@ class CommentAnalyzer:
             if len(themes) > 3:
                 recommendations.append("评论话题丰富，说明内容引发了多方面讨论")
             elif len(themes) < 2:
-                recommendations.append(
-                    "评论话题较为单一，可以尝试在内容中加入更多讨论点"
-                )
+                recommendations.append("评论话题较为单一，可以尝试在内容中加入更多讨论点")
 
             return recommendations[:5]  # 最多返回5条建议
 

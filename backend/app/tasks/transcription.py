@@ -28,9 +28,7 @@ async def transcribe_audio_task(
                 if not task:
                     raise ValidationError(f"Task not found: {task_id}")
 
-                await send_progress_update(
-                    task_id, 10, "初始化转录服务", "初始化转录服务"
-                )
+                await send_progress_update(task_id, 10, "初始化转录服务", "初始化转录服务")
 
                 if not transcription_service.validate_audio_file(audio_file_path):
                     raise ValidationError(f"音频文件无效: {audio_file_path}")

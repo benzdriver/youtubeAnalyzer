@@ -164,17 +164,11 @@ class YouTubeExtractor:
 
             error_msg = str(e).lower()
             if "private video" in error_msg or "video unavailable" in error_msg:
-                raise AudioDownloadError(
-                    f"视频不可用或为私有视频: {video_id}", video_id=video_id
-                )
+                raise AudioDownloadError(f"视频不可用或为私有视频: {video_id}", video_id=video_id)
             elif "age-restricted" in error_msg:
-                raise AudioDownloadError(
-                    f"年龄限制视频无法下载: {video_id}", video_id=video_id
-                )
+                raise AudioDownloadError(f"年龄限制视频无法下载: {video_id}", video_id=video_id)
             elif "copyright" in error_msg:
-                raise AudioDownloadError(
-                    f"版权限制视频无法下载: {video_id}", video_id=video_id
-                )
+                raise AudioDownloadError(f"版权限制视频无法下载: {video_id}", video_id=video_id)
             elif "network" in error_msg or "connection" in error_msg:
                 raise RateLimitError(f"网络连接问题，请稍后重试: {e}", retry_after=60)
             else:
@@ -263,9 +257,7 @@ class YouTubeExtractor:
                         retry_after=3600,
                     )
                 else:
-                    raise YouTubeAPIError(
-                        f"评论访问被禁止: {e}", error_code="forbidden"
-                    )
+                    raise YouTubeAPIError(f"评论访问被禁止: {e}", error_code="forbidden")
             elif e.resp.status == 404:
                 logging.warning(f"Video not found for comments: {video_id}")
                 return []  # Return empty list for missing videos
@@ -274,9 +266,7 @@ class YouTubeExtractor:
                     f"YouTube API请求过于频繁", service="youtube_api", retry_after=300
                 )
             else:
-                raise YouTubeAPIError(
-                    f"评论获取失败: {e}", error_code=str(e.resp.status)
-                )
+                raise YouTubeAPIError(f"评论获取失败: {e}", error_code=str(e.resp.status))
 
         except Exception as e:
             logging.error(f"Comment extraction failed: {e}")

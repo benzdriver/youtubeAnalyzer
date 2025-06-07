@@ -85,9 +85,7 @@ class AnalysisOrchestrator:
             step_results[AnalysisStep.TRANSCRIPTION] = transcription_result
 
             if not transcription_result.success:
-                raise ExternalServiceError(
-                    f"音频转录失败: {transcription_result.error}"
-                )
+                raise ExternalServiceError(f"音频转录失败: {transcription_result.error}")
 
             content_result, comment_result = await self._run_parallel_analysis_steps(
                 task_id, extraction_result.data, transcription_result.data, options
@@ -194,21 +192,15 @@ class AnalysisOrchestrator:
             if not video_id:
                 raise ExternalServiceError(f"无效的YouTube URL: {youtube_url}")
 
-            await send_progress_update(
-                task_id, 10, "获取视频信息", AnalysisStep.EXTRACTION
-            )
+            await send_progress_update(task_id, 10, "获取视频信息", AnalysisStep.EXTRACTION)
 
             video_info = await youtube_extractor.get_video_info(video_id)
 
-            await send_progress_update(
-                task_id, 15, "下载音频文件", AnalysisStep.EXTRACTION
-            )
+            await send_progress_update(task_id, 15, "下载音频文件", AnalysisStep.EXTRACTION)
 
             audio_file_path = await youtube_extractor.download_audio(video_id)
 
-            await send_progress_update(
-                task_id, 20, "获取评论数据", AnalysisStep.EXTRACTION
-            )
+            await send_progress_update(task_id, 20, "获取评论数据", AnalysisStep.EXTRACTION)
 
             comments = await youtube_extractor.get_comments(video_id, max_results=1000)
 
@@ -246,9 +238,7 @@ class AnalysisOrchestrator:
 
             duration = (datetime.utcnow() - step_start).total_seconds()
 
-            await send_progress_update(
-                task_id, 25, "数据提取完成", AnalysisStep.EXTRACTION
-            )
+            await send_progress_update(task_id, 25, "数据提取完成", AnalysisStep.EXTRACTION)
 
             return StepResult(
                 step=AnalysisStep.EXTRACTION,
@@ -491,9 +481,7 @@ class AnalysisOrchestrator:
 
             duration = (datetime.utcnow() - step_start).total_seconds()
 
-            await send_progress_update(
-                task_id, 100, "分析完成", AnalysisStep.FINALIZATION
-            )
+            await send_progress_update(task_id, 100, "分析完成", AnalysisStep.FINALIZATION)
 
             return StepResult(
                 step=AnalysisStep.FINALIZATION,
@@ -639,7 +627,9 @@ class AnalysisOrchestrator:
                 "engagement_quality": (
                     "high"
                     if engagement_rate > 0.05
-                    else "medium" if engagement_rate > 0.01 else "low"
+                    else "medium"
+                    if engagement_rate > 0.01
+                    else "low"
                 ),
             }
 
@@ -659,7 +649,9 @@ class AnalysisOrchestrator:
                 "resonance_level": (
                     "high"
                     if topic_overlap > 0.6
-                    else "medium" if topic_overlap > 0.3 else "low"
+                    else "medium"
+                    if topic_overlap > 0.3
+                    else "low"
                 ),
             }
 
@@ -683,14 +675,10 @@ class AnalysisOrchestrator:
 
         content_structure = content_analysis.get("content_structure", {})
         if content_structure.get("introduction_quality", 0) < 0.7:
-            recommendations["content_optimization"].append(
-                "考虑改进视频开头，提高观众留存率"
-            )
+            recommendations["content_optimization"].append("考虑改进视频开头，提高观众留存率")
 
         if content_structure.get("conclusion_quality", 0) < 0.7:
-            recommendations["content_optimization"].append(
-                "加强视频结尾，提供明确的行动号召"
-            )
+            recommendations["content_optimization"].append("加强视频结尾，提供明确的行动号召")
 
         comment_sentiment = comment_analysis.get("sentiment_distribution", {})
         negative_ratio = (
@@ -700,35 +688,25 @@ class AnalysisOrchestrator:
         )
 
         if negative_ratio > 0.3:
-            recommendations["audience_engagement"].append(
-                "关注负面反馈，考虑在后续内容中回应观众关切"
-            )
+            recommendations["audience_engagement"].append("关注负面反馈，考虑在后续内容中回应观众关切")
 
         creator_responses = comment_analysis.get("creator_interaction", {}).get(
             "response_rate", 0
         )
         if creator_responses < 0.1:
-            recommendations["audience_engagement"].append(
-                "增加与观众的互动，回复更多评论以提高参与度"
-            )
+            recommendations["audience_engagement"].append("增加与观众的互动，回复更多评论以提高参与度")
 
         speaking_rate = transcript_info.get("speaking_rate_wpm", 0)
         if speaking_rate > 180:
-            recommendations["technical_improvements"].append(
-                "考虑放慢语速，提高内容可理解性"
-            )
+            recommendations["technical_improvements"].append("考虑放慢语速，提高内容可理解性")
         elif speaking_rate < 120:
-            recommendations["technical_improvements"].append(
-                "可以适当提高语速，保持观众注意力"
-            )
+            recommendations["technical_improvements"].append("可以适当提高语速，保持观众注意力")
 
         view_count = video_info.get("view_count", 0)
         like_count = video_info.get("like_count", 0)
 
         if view_count > 0 and like_count / view_count < 0.02:
-            recommendations["strategic_insights"].append(
-                "考虑优化内容质量或标题缩略图以提高点赞率"
-            )
+            recommendations["strategic_insights"].append("考虑优化内容质量或标题缩略图以提高点赞率")
 
         return recommendations
 
