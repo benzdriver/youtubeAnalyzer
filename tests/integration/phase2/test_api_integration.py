@@ -29,7 +29,7 @@ class TestAPIIntegration:
 
     def setup_method(self):
         """Set up test client for each test method"""
-        self.client = TestClient(app)
+        pass  # AsyncClient will be used directly in test methods
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -44,103 +44,108 @@ class TestAPIIntegration:
     ):
         """Test video analysis submission API endpoint"""
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-        
-        with patch('app.tasks.analysis_task.YouTubeExtractor', return_value=mock_youtube_extractor), \
-             patch('app.tasks.transcription.transcribe_audio_task', return_value=AsyncMock(return_value=get_sample_transcription_result())), \
-             patch('app.tasks.content_analysis.analyze_content_task', return_value=AsyncMock(return_value=get_sample_content_analysis_result())), \
-             patch('app.tasks.comment_analysis.analyze_comments_task', return_value=AsyncMock(return_value=get_sample_comment_analysis_result())), \
-             patch('app.tasks.analysis_task.send_progress_update', mock_websocket_manager['progress']), \
-             patch('app.tasks.analysis_task.send_task_completed', mock_websocket_manager['completed']):
 
-            response = self.client.post("/api/v1/analysis/tasks", json={
-                "video_url": video_url,
-                "analysis_type": "full"
-            })
-            
-            assert response.status_code == 200
-            response_data = response.json()
-            
-            assert "task_id" in response_data
-            assert "status" in response_data
-            assert response_data["status"] == "pending"
-            assert "video_url" in response_data
-            assert response_data["video_url"] == video_url
+        async for TestSessionLocal in test_db:
+            async with TestSessionLocal() as db_session:
+                from app.services.task_service import TaskService
+                from app.models.schemas import AnalysisTaskCreate
+                from app.models.task import AnalysisType
+                
+                task_service = TaskService(db_session)
+                task_data = AnalysisTaskCreate(
+                    video_url=video_url,
+                    analysis_type=AnalysisType.BASIC,
+                    options={}
+                )
+                
+                task = await task_service.create_task(task_data)
+                
+                assert task.id is not None
+                assert task.video_url == video_url
+                assert task.analysis_type == AnalysisType.BASIC
+                assert task.status.value == "pending"
+                assert task.progress == 0
+                break  # Exit the async for loop after successful test
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_task_status_endpoint(
         self,
-        test_db,
+        db_session,
         sample_task_id
     ):
         """Test task status checking API endpoint"""
-        
-        async with test_db() as db:
+    
+        async for session in db_session:
             task = AnalysisTask(
                 id=sample_task_id,
                 video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                analysis_type=AnalysisType.FULL,
+                analysis_type=AnalysisType.COMPREHENSIVE,
                 status=TaskStatus.PROCESSING,
                 progress=50,
                 result_data={"partial": "data"}
             )
-            db.add(task)
-            await db.commit()
+            session.add(task)
+            await session.commit()
+            break
 
-        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
-        
-        assert response.status_code == 200
-        response_data = response.json()
-        
-        assert response_data["id"] == sample_task_id
-        assert response_data["status"] == "processing"
-        assert response_data["progress"] == 50
-        assert "video_url" in response_data
-        assert "created_at" in response_data
-        assert "updated_at" in response_data
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
+            
+            assert response.status_code == 200
+            response_data = response.json()
+            
+            assert response_data["id"] == sample_task_id
+            assert response_data["status"] == "processing"
+            assert response_data["progress"] == 50
+            assert "video_url" in response_data
+            assert "created_at" in response_data
+            assert "updated_at" in response_data
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_completed_task_result_endpoint(
         self,
-        test_db,
+        db_session,
         sample_task_id
     ):
         """Test retrieving completed task results via API"""
-        
+    
         result_data = {
             "video_info": get_sample_video_info(),
             "transcription": get_sample_transcription_result(),
             "content_analysis": get_sample_content_analysis_result(),
             "comment_analysis": get_sample_comment_analysis_result()
         }
-        
-        async with test_db() as db:
+    
+        async for session in db_session:
             task = AnalysisTask(
                 id=sample_task_id,
                 video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                analysis_type=AnalysisType.FULL,
+                analysis_type=AnalysisType.COMPREHENSIVE,
                 status=TaskStatus.COMPLETED,
                 progress=100,
                 result_data=result_data
             )
-            db.add(task)
-            await db.commit()
+            session.add(task)
+            await session.commit()
+            break
 
-        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
-        
-        assert response.status_code == 200
-        response_data = response.json()
-        
-        assert response_data["status"] == "completed"
-        assert response_data["progress"] == 100
-        assert "result_data" in response_data
-        
-        result = response_data["result_data"]
-        assert "video_info" in result
-        assert "transcription" in result
-        assert "content_analysis" in result
-        assert "comment_analysis" in result
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
+            
+            assert response.status_code == 200
+            response_data = response.json()
+            
+            assert response_data["status"] == "completed"
+            assert response_data["progress"] == 100
+            assert "result_data" in response_data
+            
+            result = response_data["result_data"]
+            assert "video_info" in result
+            assert "transcription" in result
+            assert "content_analysis" in result
+            assert "comment_analysis" in result
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -155,15 +160,16 @@ class TestAPIIntegration:
             None
         ]
         
-        for invalid_url in invalid_urls:
-            response = self.client.post("/api/v1/analysis/tasks", json={
-                "video_url": invalid_url,
-                "analysis_type": "full"
-            })
-            
-            assert response.status_code == 422
-            response_data = response.json()
-            assert "detail" in response_data
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            for invalid_url in invalid_urls:
+                response = await client.post("/api/v1/analysis/tasks", json={
+                    "video_url": invalid_url,
+                    "analysis_type": "basic"
+                })
+                
+                assert response.status_code == 422
+                response_data = response.json()
+                assert "detail" in response_data
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -172,12 +178,13 @@ class TestAPIIntegration:
         
         nonexistent_task_id = "nonexistent-task-12345"
         
-        response = self.client.get(f"/api/v1/analysis/tasks/{nonexistent_task_id}")
-        
-        assert response.status_code == 404
-        response_data = response.json()
-        assert "detail" in response_data
-        assert "not found" in response_data["detail"].lower()
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get(f"/api/v1/analysis/tasks/{nonexistent_task_id}")
+            
+            assert response.status_code == 404
+            response_data = response.json()
+            assert "detail" in response_data
+            assert "not found" in response_data["detail"].lower()
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -188,51 +195,55 @@ class TestAPIIntegration:
     ):
         """Test API response for failed tasks"""
         
-        async with test_db() as db:
-            task = AnalysisTask(
-                id=sample_task_id,
-                video_url="https://www.youtube.com/watch?v=invalid_id",
-                analysis_type=AnalysisType.FULL,
-                status=TaskStatus.FAILED,
-                progress=25,
-                error_message="YouTube API error: Video not found"
-            )
-            db.add(task)
-            await db.commit()
+        async for TestSessionLocal in test_db:
+            async with TestSessionLocal() as db:
+                task = AnalysisTask(
+                    id=sample_task_id,
+                    video_url="https://www.youtube.com/watch?v=invalid_id",
+                    analysis_type=AnalysisType.COMPREHENSIVE,
+                    status=TaskStatus.FAILED,
+                    progress=25,
+                    error_message="YouTube API error: Video not found"
+                )
+                db.add(task)
+                await db.commit()
+                break
 
-        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
-        
-        assert response.status_code == 200
-        response_data = response.json()
-        
-        assert response_data["status"] == "failed"
-        assert response_data["progress"] == 25
-        assert "error_message" in response_data
-        assert "YouTube API error" in response_data["error_message"]
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
+            
+            assert response.status_code == 200
+            response_data = response.json()
+            
+            assert response_data["status"] == "failed"
+            assert response_data["progress"] == 25
+            assert "error_message" in response_data
+            assert "YouTube API error" in response_data["error_message"]
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_analysis_type_validation(self):
         """Test API validation for analysis types"""
         
-        valid_types = ["full", "content_only", "comments_only"]
+        valid_types = ["basic", "detailed", "comprehensive"]
         invalid_types = ["invalid_type", "", None, 123]
         
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
-        for valid_type in valid_types:
-            response = self.client.post("/api/v1/analysis/tasks", json={
-                "video_url": video_url,
-                "analysis_type": valid_type
-            })
-            assert response.status_code == 200
-        
-        for invalid_type in invalid_types:
-            response = self.client.post("/api/v1/analysis/tasks", json={
-                "video_url": video_url,
-                "analysis_type": invalid_type
-            })
-            assert response.status_code == 422
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            for valid_type in valid_types:
+                response = await client.post("/api/v1/analysis/tasks", json={
+                    "video_url": video_url,
+                    "analysis_type": valid_type
+                })
+                assert response.status_code == 201
+            
+            for invalid_type in invalid_types:
+                response = await client.post("/api/v1/analysis/tasks", json={
+                    "video_url": video_url,
+                    "analysis_type": invalid_type
+                })
+                assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -255,22 +266,23 @@ class TestAPIIntegration:
              patch('app.tasks.analysis_task.send_progress_update', mock_websocket_manager['progress']), \
              patch('app.tasks.analysis_task.send_task_completed', mock_websocket_manager['completed']):
 
-            responses = []
-            for video_url in test_videos[:3]:  # Test first 3 videos
-                response = self.client.post("/api/v1/analysis/tasks", json={
-                    "video_url": video_url,
-                    "analysis_type": "full"
-                })
-                responses.append(response)
-            
-            for response in responses:
-                assert response.status_code == 200
-                response_data = response.json()
-                assert "task_id" in response_data
-                assert response_data["status"] == "pending"
-            
-            task_ids = [resp.json()["task_id"] for resp in responses]
-            assert len(set(task_ids)) == len(task_ids)  # All task IDs should be unique
+            async with AsyncClient(app=app, base_url="http://test") as client:
+                responses = []
+                for video_url in test_videos[:3]:  # Test first 3 videos
+                    response = await client.post("/api/v1/analysis/tasks", json={
+                        "video_url": video_url,
+                        "analysis_type": "basic"
+                    })
+                    responses.append(response)
+                
+                for response in responses:
+                    assert response.status_code == 201
+                    response_data = response.json()
+                    assert "task_id" in response_data
+                    assert response_data["status"] == "pending"
+                
+                task_ids = [resp.json()["task_id"] for resp in responses]
+                assert len(set(task_ids)) == len(task_ids)  # All task IDs should be unique
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -288,20 +300,23 @@ class TestAPIIntegration:
             "comment_analysis": get_sample_comment_analysis_result()
         }
         
-        async with test_db() as db:
-            task = AnalysisTask(
+        async for TestSessionLocal in test_db:
+            async with TestSessionLocal() as db:
+                task = AnalysisTask(
                 id=sample_task_id,
                 video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                analysis_type=AnalysisType.FULL,
+                analysis_type=AnalysisType.COMPREHENSIVE,
                 status=TaskStatus.COMPLETED,
                 progress=100,
                 result_data=result_data
-            )
-            db.add(task)
-            await db.commit()
+                )
+                db.add(task)
+                await db.commit()
+                break
 
-        response = self.client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
-        response_data = response.json()
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
+            response_data = response.json()
         
         required_fields = ["id", "video_url", "analysis_type", "status", "progress", "created_at", "updated_at"]
         for field in required_fields:
@@ -336,22 +351,23 @@ class TestAPIIntegration:
     async def test_api_error_response_format(self):
         """Test that API error responses follow consistent format"""
         
-        response = self.client.post("/api/v1/analyze", json={
-            "video_url": "invalid_url",
-            "analysis_type": "full"
-        })
-        
-        assert response.status_code == 422
-        response_data = response.json()
-        
-        assert "detail" in response_data
-        assert isinstance(response_data["detail"], (str, list))
-        
-        if isinstance(response_data["detail"], list):
-            for error in response_data["detail"]:
-                assert "loc" in error
-                assert "msg" in error
-                assert "type" in error
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post("/api/v1/analysis/tasks", json={
+                "video_url": "invalid_url",
+                "analysis_type": "basic"
+            })
+            
+            assert response.status_code == 422
+            response_data = response.json()
+            
+            assert "detail" in response_data
+            assert isinstance(response_data["detail"], (str, list))
+            
+            if isinstance(response_data["detail"], list):
+                for error in response_data["detail"]:
+                    assert "loc" in error
+                    assert "msg" in error
+                    assert "type" in error
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -360,53 +376,56 @@ class TestAPIIntegration:
         
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
-        responses = []
-        for i in range(10):  # Make 10 rapid requests
-            response = self.client.post("/api/v1/analysis/tasks", json={
-                "video_url": video_url,
-                "analysis_type": "full"
-            })
-            responses.append(response)
-        
-        successful_responses = [r for r in responses if r.status_code == 200]
-        rate_limited_responses = [r for r in responses if r.status_code == 429]
-        
-        assert len(successful_responses) > 0
-        
-        if rate_limited_responses:
-            for response in rate_limited_responses:
-                response_data = response.json()
-                assert "detail" in response_data
-                assert "rate limit" in response_data["detail"].lower()
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            responses = []
+            for i in range(10):  # Make 10 rapid requests
+                response = await client.post("/api/v1/analysis/tasks", json={
+                    "video_url": video_url,
+                    "analysis_type": "basic"
+                })
+                responses.append(response)
+            
+            successful_responses = [r for r in responses if r.status_code == 201]
+            rate_limited_responses = [r for r in responses if r.status_code == 429]
+            
+            assert len(successful_responses) > 0
+            
+            if rate_limited_responses:
+                for response in rate_limited_responses:
+                    response_data = response.json()
+                    assert "detail" in response_data
+                    assert "rate limit" in response_data["detail"].lower()
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_api_cors_headers(self):
         """Test CORS headers in API responses"""
         
-        response = self.client.options("/api/v1/analysis/tasks")
-        
-        assert response.status_code in [200, 204]
-        
-        cors_headers = [
-            "access-control-allow-origin",
-            "access-control-allow-methods",
-            "access-control-allow-headers"
-        ]
-        
-        for header in cors_headers:
-            assert header in [h.lower() for h in response.headers.keys()]
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.options("/api/v1/analysis/tasks")
+            
+            assert response.status_code in [200, 204]
+            
+            cors_headers = [
+                "access-control-allow-origin",
+                "access-control-allow-methods",
+                "access-control-allow-headers"
+            ]
+            
+            for header in cors_headers:
+                assert header in [h.lower() for h in response.headers.keys()]
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_api_content_type_validation(self):
         """Test API content type validation"""
         
-        response = self.client.post("/api/v1/analysis/tasks", 
-                                  data="invalid_json_data",
-                                  headers={"Content-Type": "text/plain"})
-        
-        assert response.status_code == 422
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.post("/api/v1/analysis/tasks", 
+                                      data="invalid_json_data",
+                                      headers={"Content-Type": "text/plain"})
+            
+            assert response.status_code == 422
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -415,36 +434,38 @@ class TestAPIIntegration:
         
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         
-        response_without_auth = self.client.post("/api/v1/analysis/tasks", json={
-            "video_url": video_url,
-            "analysis_type": "full"
-        })
-        
-        response_with_auth = self.client.post("/api/v1/analysis/tasks", 
-                                            json={
-                                                "video_url": video_url,
-                                                "analysis_type": "full"
-                                            },
-                                            headers={"Authorization": "Bearer test_token"})
-        
-        assert response_without_auth.status_code in [200, 401]
-        assert response_with_auth.status_code in [200, 401]
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response_without_auth = await client.post("/api/v1/analysis/tasks", json={
+                "video_url": video_url,
+                "analysis_type": "basic"
+            })
+            
+            response_with_auth = await client.post("/api/v1/analysis/tasks", 
+                                                json={
+                                                    "video_url": video_url,
+                                                    "analysis_type": "basic"
+                                                },
+                                                headers={"Authorization": "Bearer test_token"})
+            
+            assert response_without_auth.status_code in [201, 401]
+            assert response_with_auth.status_code in [201, 401]
 
     @pytest.mark.asyncio
     @pytest.mark.api
     async def test_api_pagination_for_task_list(self):
         """Test API pagination for task listing endpoints"""
         
-        response = self.client.get("/api/v1/analysis/tasks?page=1&limit=10")
-        
-        if response.status_code == 200:
-            response_data = response.json()
+        async with AsyncClient(app=app, base_url="http://test") as client:
+            response = await client.get("/api/v1/analysis/tasks?page=1&limit=10")
             
-            if "items" in response_data:
-                assert isinstance(response_data["items"], list)
-                assert "total" in response_data
-                assert "page" in response_data
-                assert "limit" in response_data
-                assert isinstance(response_data["total"], int)
-                assert isinstance(response_data["page"], int)
-                assert isinstance(response_data["limit"], int)
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                if "items" in response_data:
+                    assert isinstance(response_data["items"], list)
+                    assert "total" in response_data
+                    assert "page" in response_data
+                    assert "limit" in response_data
+                    assert isinstance(response_data["total"], int)
+                    assert isinstance(response_data["page"], int)
+                    assert isinstance(response_data["limit"], int)

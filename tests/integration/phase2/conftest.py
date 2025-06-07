@@ -10,8 +10,9 @@ backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..
 sys.path.insert(0, backend_path)
 
 from app.core.database import get_db_session
-from app.models.task import Base
+from app.models.task import Base, AnalysisTask
 from app.main import app
+from sqlalchemy import text
 from fixtures.youtube_data import (
     get_sample_video_info, get_sample_comments_data, get_sample_extraction_result
 )
@@ -43,13 +44,27 @@ def setup_test_environment():
     os.environ.setdefault("OPENAI_API_KEY", "test_key_for_integration_testing")
     os.environ.setdefault("YOUTUBE_API_KEY", "test_key_for_integration_testing")
 
-@pytest.fixture
+@pytest.fixture(scope="function", autouse=True)
 async def test_db():
-    """Create test database session factory."""
+    """Create test database for each test function."""
     engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
+    
+    # Import all models to ensure they're registered with metadata
+    from app.models.task import AnalysisTask, TaskStatus, AnalysisType
     
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        
+        result = await conn.run_sync(
+            lambda sync_conn: sync_conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table'")
+            ).fetchall()
+        )
+        tables = [row[0] for row in result]
+        print(f"Created tables: {tables}")
+        
+        if 'tasks' not in tables:
+            raise RuntimeError(f"Tasks table not created. Available tables: {tables}")
     
     TestSessionLocal = sessionmaker(
         engine, class_=AsyncSession, expire_on_commit=False
@@ -69,6 +84,18 @@ async def test_db():
     finally:
         app.dependency_overrides.clear()
         await engine.dispose()
+
+@pytest.fixture(scope="function")
+async def db_session(test_db):
+    """Provide a database session for individual tests."""
+    async for TestSessionLocal in test_db:
+        async with TestSessionLocal() as session:
+            try:
+                yield session
+            finally:
+                await session.rollback()
+                await session.close()
+        break
 
 @pytest.fixture
 def test_videos():
