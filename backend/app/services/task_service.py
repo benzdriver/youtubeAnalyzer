@@ -17,10 +17,12 @@ class TaskService:
         """Create a new analysis task."""
         task = AnalysisTask(
             id=str(uuid.uuid4()),
-            youtube_url=str(task_data.video_url),
+            video_url=str(task_data.video_url),
+            analysis_type=task_data.analysis_type,
             status=TaskStatus.PENDING,
             progress=0,
-            result_data=task_data.options or {}
+            options=task_data.options or {},
+            result_data={}
         )
 
         self.db.add(task)
