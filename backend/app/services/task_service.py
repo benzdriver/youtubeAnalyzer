@@ -27,15 +27,7 @@ class TaskService:
 
         self.db.add(task)
         await self.db.commit()
-        try:
-            await self.db.refresh(task)
-        except Exception:
-            result = await self.db.execute(
-                select(AnalysisTask).where(AnalysisTask.id == task.id)
-            )
-            refreshed_task = result.scalar_one_or_none()
-            if refreshed_task:
-                task = refreshed_task
+        await self.db.refresh(task)
         return task
 
     async def get_task(self, task_id: str) -> Optional[AnalysisTask]:

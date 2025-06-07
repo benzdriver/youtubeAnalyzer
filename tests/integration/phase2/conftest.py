@@ -60,44 +60,48 @@ async def test_db():
         engine, class_=AsyncSession, expire_on_commit=False
     )
     
-    global_session_maker = TestSessionLocal
+    shared_session = TestSessionLocal()
     
     async def override_get_db_session():
-        async with global_session_maker() as session:
-            try:
-                yield session
-            except Exception:
-                await session.rollback()
-                raise
-            finally:
-                await session.close()
+        try:
+            yield shared_session
+        except Exception:
+            await shared_session.rollback()
+            raise
     
     app.dependency_overrides[get_db_session] = override_get_db_session
     
     try:
-        yield TestSessionLocal
+        yield shared_session
     finally:
         app.dependency_overrides.clear()
         try:
-            async with engine.begin() as conn:
-                await conn.execute(text("TRUNCATE TABLE tasks CASCADE"))
+            if shared_session.is_active:
+                await shared_session.execute(text("TRUNCATE TABLE tasks CASCADE"))
+                await shared_session.commit()
         except Exception:
-            pass
-        await engine.dispose()
+            try:
+                await shared_session.rollback()
+            except Exception:
+                pass
+        finally:
+            try:
+                if not shared_session.is_closed:
+                    await shared_session.close()
+            except Exception:
+                pass
+            await engine.dispose()
 
 @pytest.fixture(scope="function")
 async def db_session(test_db):
     """Provide a database session for individual tests."""
-    session_maker = await anext(test_db)
+    shared_session = await anext(test_db)
     
-    async with session_maker() as session:
-        try:
-            yield session
-        except Exception:
-            await session.rollback()
-            raise
-        finally:
-            await session.close()
+    try:
+        yield shared_session
+    except Exception:
+        await shared_session.rollback()
+        raise
 
 @pytest.fixture
 def test_videos():

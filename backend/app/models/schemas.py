@@ -24,6 +24,8 @@ class AnalysisTaskResponse(BaseModel):
     updated_at: datetime
     completed_at: Optional[datetime] = None
     estimated_completion: Optional[datetime] = None
+    result_data: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
 
 
 class AnalysisResult(BaseModel):

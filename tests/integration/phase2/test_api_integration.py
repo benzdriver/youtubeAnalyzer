@@ -45,27 +45,26 @@ class TestAPIIntegration:
         """Test video analysis submission API endpoint"""
         video_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-        async for TestSessionLocal in test_db:
-            async with TestSessionLocal() as db_session:
-                from app.services.task_service import TaskService
-                from app.models.schemas import AnalysisTaskCreate
-                from app.models.task import AnalysisType
-                
-                task_service = TaskService(db_session)
-                task_data = AnalysisTaskCreate(
-                    video_url=video_url,
-                    analysis_type=AnalysisType.BASIC,
-                    options={}
-                )
-                
-                task = await task_service.create_task(task_data)
-                
-                assert task.id is not None
-                assert task.video_url == video_url
-                assert task.analysis_type == AnalysisType.BASIC
-                assert task.status.value == "pending"
-                assert task.progress == 0
-                break  # Exit the async for loop after successful test
+        db_session = await anext(test_db)
+        
+        from app.services.task_service import TaskService
+        from app.models.schemas import AnalysisTaskCreate
+        from app.models.task import AnalysisType
+        
+        task_service = TaskService(db_session)
+        task_data = AnalysisTaskCreate(
+            video_url=video_url,
+            analysis_type=AnalysisType.BASIC,
+            options={}
+        )
+        
+        task = await task_service.create_task(task_data)
+        
+        assert task.id is not None
+        assert task.video_url == video_url
+        assert task.analysis_type == AnalysisType.BASIC
+        assert task.status.value == "pending"
+        assert task.progress == 0
 
     @pytest.mark.asyncio
     @pytest.mark.api
@@ -110,17 +109,16 @@ class TestAPIIntegration:
         }
 
         db = await anext(db_session)
-        async with db:
-            task = AnalysisTask(
-                id=sample_task_id,
-                video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        task = AnalysisTask(
+            id=sample_task_id,
+            video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
             analysis_type=AnalysisType.COMPREHENSIVE,
             status=TaskStatus.COMPLETED,
             progress=100,
             result_data=result_data
-            )
-            db.add(task)
-            await db.commit()
+        )
+        db.add(task)
+        await db.commit()
 
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
@@ -191,17 +189,16 @@ class TestAPIIntegration:
         """Test API response for failed tasks"""
         
         db = await anext(db_session)
-        async with db:
-            task = AnalysisTask(
-                id=sample_task_id,
-                video_url="https://www.youtube.com/watch?v=invalid_id",
-                analysis_type=AnalysisType.COMPREHENSIVE,
-                status=TaskStatus.FAILED,
-                progress=25,
-                error_message="YouTube API error: Video not found"
-            )
-            db.add(task)
-            await db.commit()
+        task = AnalysisTask(
+            id=sample_task_id,
+            video_url="https://www.youtube.com/watch?v=invalid_id",
+            analysis_type=AnalysisType.COMPREHENSIVE,
+            status=TaskStatus.FAILED,
+            progress=25,
+            error_message="YouTube API error: Video not found"
+        )
+        db.add(task)
+        await db.commit()
 
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
@@ -298,17 +295,16 @@ class TestAPIIntegration:
         }
 
         db = await anext(db_session)
-        async with db:
-            task = AnalysisTask(
-                id=sample_task_id,
-                video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        task = AnalysisTask(
+            id=sample_task_id,
+            video_url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
             analysis_type=AnalysisType.COMPREHENSIVE,
             status=TaskStatus.COMPLETED,
             progress=100,
             result_data=result_data
-            )
-            db.add(task)
-            await db.commit()
+        )
+        db.add(task)
+        await db.commit()
 
         async with AsyncClient(app=app, base_url="http://test") as client:
             response = await client.get(f"/api/v1/analysis/tasks/{sample_task_id}")
