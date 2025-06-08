@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends
 from fastapi.responses import Response
 from typing import Optional
 import json
@@ -6,25 +6,32 @@ import csv
 import io
 from datetime import datetime
 
-from app.models.schemas import AnalysisResult
-from app.services.analysis_service import AnalysisService
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.core.database import get_db_session
+from app.services.task_service import TaskService
+from app.models.task import TaskStatus
+# from app.models.schemas import AnalysisResult # This schema might not be directly applicable anymore
 
 router = APIRouter()
 
 @router.get("/export/{task_id}/json")
 async def export_json(
     task_id: str,
-    pretty: bool = Query(False, description="Pretty print JSON")
+    pretty: bool = Query(False, description="Pretty print JSON"),
+    db: AsyncSession = Depends(get_db_session)
 ):
     """Export analysis result as JSON"""
     try:
-        analysis_service = AnalysisService()
-        result = await analysis_service.get_analysis_result(task_id)
+        task_service = TaskService(db)
+        task = await task_service.get_task(task_id)
         
-        if not result:
-            raise HTTPException(status_code=404, detail="Analysis result not found")
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status != TaskStatus.COMPLETED or not task.result_data:
+            raise HTTPException(status_code=400, detail="Analysis not completed or result data is missing")
         
-        json_data = result.dict() if hasattr(result, 'dict') else result
+        result = task.result_data # This is already a dict
+        json_data = result
         
         if pretty:
             json_str = json.dumps(json_data, indent=2, ensure_ascii=False)
@@ -42,14 +49,18 @@ async def export_json(
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @router.get("/export/{task_id}/csv")
-async def export_csv(task_id: str):
+async def export_csv(task_id: str, db: AsyncSession = Depends(get_db_session)):
     """Export analysis result as CSV"""
     try:
-        analysis_service = AnalysisService()
-        result = await analysis_service.get_analysis_result(task_id)
+        task_service = TaskService(db)
+        task = await task_service.get_task(task_id)
         
-        if not result:
-            raise HTTPException(status_code=404, detail="Analysis result not found")
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status != TaskStatus.COMPLETED or not task.result_data:
+            raise HTTPException(status_code=400, detail="Analysis not completed or result data is missing")
+
+        result = task.result_data # This is a dict
         
         output = io.StringIO()
         writer = csv.writer(output)
@@ -59,39 +70,43 @@ async def export_csv(task_id: str):
             "Quality Score", "Sentiment", "Key Points Count", "Topics Count"
         ])
         
-        video_info = getattr(result, 'video_info', {}) or getattr(result, 'summary', {})
-        content_insights = getattr(result, 'content_insights', {})
+        # Assuming 'summary' key in result_data contains video info and orchestrator summary
+        video_info_data = result.get('summary', {})
+        # Assuming 'content_insights' key in result_data contains detailed content analysis
+        content_insights_data = result.get('content_insights', {})
         
         writer.writerow([
             task_id,
-            video_info.get('title', ''),
-            video_info.get('channel_title', ''),
-            video_info.get('duration', 0),
-            video_info.get('view_count', 0),
-            content_insights.get('quality_score', 0),
-            content_insights.get('sentiment', {}).get('overall', ''),
-            len(content_insights.get('key_points', [])),
-            len(content_insights.get('topics', []))
+            video_info_data.get('title', ''),
+            video_info_data.get('channel_title', ''),
+            video_info_data.get('duration', 0),
+            video_info_data.get('view_count', 0),
+            content_insights_data.get('quality_score', 0),
+            content_insights_data.get('sentiment', {}).get('overall', ''),
+            len(content_insights_data.get('key_points', [])),
+            len(content_insights_data.get('topics', []))
         ])
         
-        if content_insights.get('key_points'):
+        key_points = content_insights_data.get('key_points', [])
+        if key_points:
             writer.writerow([])
             writer.writerow(["Key Points"])
             writer.writerow(["Timestamp", "Content", "Importance"])
             
-            for point in content_insights['key_points']:
+            for point in key_points:
                 writer.writerow([
                     point.get('timestamp', 0),
                     point.get('content', ''),
                     point.get('importance', 0)
                 ])
         
-        if content_insights.get('topics'):
+        topics = content_insights_data.get('topics', [])
+        if topics:
             writer.writerow([])
             writer.writerow(["Topics"])
             writer.writerow(["Topic"])
             
-            for topic in content_insights['topics']:
+            for topic in topics:
                 writer.writerow([topic])
         
         csv_content = output.getvalue()
@@ -108,55 +123,65 @@ async def export_csv(task_id: str):
         raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @router.get("/export/{task_id}/summary")
-async def export_summary(task_id: str):
+async def export_summary(task_id: str, db: AsyncSession = Depends(get_db_session)):
     """Export analysis summary as plain text"""
     try:
-        analysis_service = AnalysisService()
-        result = await analysis_service.get_analysis_result(task_id)
+        task_service = TaskService(db)
+        task = await task_service.get_task(task_id)
         
-        if not result:
-            raise HTTPException(status_code=404, detail="Analysis result not found")
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status != TaskStatus.COMPLETED or not task.result_data:
+            raise HTTPException(status_code=400, detail="Analysis not completed or result data is missing")
+
+        result = task.result_data # This is a dict
+
+        video_info_data = result.get('summary', {})
+        content_insights_data = result.get('content_insights', {})
         
-        video_info = getattr(result, 'video_info', {}) or getattr(result, 'summary', {})
-        content_insights = getattr(result, 'content_insights', {})
-        
+        # Use a more general summary, potentially from the orchestrator's summary part
+        main_summary_text = video_info_data.get('overall_summary',
+                                            content_insights_data.get('summary', 'No detailed summary available'))
+
         summary_lines = [
             f"YouTube Video Analysis Summary",
             f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             f"Task ID: {task_id}",
             "",
             "=== Video Information ===",
-            f"Title: {video_info.get('title', 'N/A')}",
-            f"Channel: {video_info.get('channel_title', 'N/A')}",
-            f"Duration: {video_info.get('duration', 0)} seconds",
-            f"View Count: {video_info.get('view_count', 0):,}",
+            f"Title: {video_info_data.get('title', 'N/A')}",
+            f"Channel: {video_info_data.get('channel_title', 'N/A')}",
+            f"Duration: {video_info_data.get('duration', 0)} seconds",
+            f"View Count: {video_info_data.get('view_count', 0):,}",
             "",
             "=== Content Analysis ===",
-            f"Quality Score: {content_insights.get('quality_score', 0)}/100",
-            f"Overall Sentiment: {content_insights.get('sentiment', {}).get('overall', 'N/A')}",
-            f"Sentiment Score: {content_insights.get('sentiment', {}).get('score', 0):.2f}",
+            f"Quality Score: {content_insights_data.get('quality_score', 0)}/100",
+            f"Overall Sentiment: {content_insights_data.get('sentiment', {}).get('overall', 'N/A')}",
+            f"Sentiment Score: {content_insights_data.get('sentiment', {}).get('score', 0):.2f}",
             "",
-            "=== Summary ===",
-            content_insights.get('summary', 'No summary available'),
+            "=== Overall Summary ===",
+            main_summary_text,
             "",
         ]
         
-        if content_insights.get('key_points'):
+        key_points = content_insights_data.get('key_points', [])
+        if key_points:
             summary_lines.extend([
                 "=== Key Points ===",
                 ""
             ])
-            for i, point in enumerate(content_insights['key_points'][:10], 1):
+            for i, point in enumerate(key_points[:10], 1):
                 timestamp = point.get('timestamp', 0)
                 minutes = int(timestamp // 60)
                 seconds = int(timestamp % 60)
                 summary_lines.append(f"{i}. [{minutes:02d}:{seconds:02d}] {point.get('content', '')}")
             summary_lines.append("")
         
-        if content_insights.get('topics'):
+        topics = content_insights_data.get('topics', [])
+        if topics:
             summary_lines.extend([
                 "=== Topics ===",
-                ", ".join(content_insights['topics']),
+                ", ".join(topics),
                 ""
             ])
         
@@ -175,22 +200,27 @@ async def export_summary(task_id: str):
 @router.post("/share/{task_id}")
 async def share_result(
     task_id: str,
-    platform: str = Query(..., description="Sharing platform (twitter, linkedin, etc.)")
+    platform: str = Query(..., description="Sharing platform (twitter, linkedin, etc.)"),
+    db: AsyncSession = Depends(get_db_session)
 ):
     """Generate shareable content for social media platforms"""
     try:
-        analysis_service = AnalysisService()
-        result = await analysis_service.get_analysis_result(task_id)
+        task_service = TaskService(db)
+        task = await task_service.get_task(task_id)
+
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        if task.status != TaskStatus.COMPLETED or not task.result_data:
+            raise HTTPException(status_code=400, detail="Analysis not completed or result data is missing")
+
+        result = task.result_data # This is a dict
+
+        video_info_data = result.get('summary', {})
+        content_insights_data = result.get('content_insights', {})
         
-        if not result:
-            raise HTTPException(status_code=404, detail="Analysis result not found")
-        
-        video_info = getattr(result, 'video_info', {}) or getattr(result, 'summary', {})
-        content_insights = getattr(result, 'content_insights', {})
-        
-        title = video_info.get('title', 'YouTube Video')
-        quality_score = content_insights.get('quality_score', 0)
-        sentiment = content_insights.get('sentiment', {}).get('overall', 'neutral')
+        title = video_info_data.get('title', 'YouTube Video')
+        quality_score = content_insights_data.get('quality_score', 0)
+        sentiment = content_insights_data.get('sentiment', {}).get('overall', 'neutral')
         
         if platform.lower() == 'twitter':
             share_text = f"📊 Analyzed '{title}' - Quality: {quality_score}/100, Sentiment: {sentiment} #YouTubeAnalysis #VideoInsights"

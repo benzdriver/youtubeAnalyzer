@@ -18,7 +18,7 @@
                        │   Data Layer    │
                        ├─────────────────┤
                        │ • Redis (Queue) │
-                       │ • SQLite (Data) │
+                       │ • PostgreSQL (Data) │
                        │ • File Storage  │
                        └─────────────────┘
 ```
@@ -28,7 +28,7 @@
 ### 后端技术栈
 - **FastAPI**: 高性能异步Web框架，自动API文档生成
 - **Celery + Redis**: 分布式任务队列，支持异步处理
-- **SQLite**: 轻量级数据库，适合单机部署
+- **PostgreSQL**: 强大的开源对象关系数据库系统
 - **WebSocket**: 实时进度推送
 - **Pydantic**: 数据验证和序列化
 
